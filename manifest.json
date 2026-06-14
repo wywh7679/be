@@ -1,0 +1,21 @@
+{
+  "manifest_version": 2,
+  "name": "All Tabs JavaScript Runner",
+  "version": "1.0.0",
+  "description": "Run user-supplied JavaScript across all open tabs from a popup.",
+  "permissions": [
+    "tabs",
+    "storage",
+    "<all_urls>"
+  ],
+  "browser_action": {
+    "default_title": "Run JavaScript in all tabs",
+    "default_popup": "popup.html"
+  },
+  "applications": {
+    "gecko": {
+      "id": "all-tabs-js-runner@example.com",
+      "strict_min_version": "57.0"
+    }
+  }
+}

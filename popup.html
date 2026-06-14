@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>All Tabs JavaScript Runner</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <h1>Run JavaScript in all tabs</h1>
+      <p class="warning">
+        Code runs with page privileges in every compatible tab. Only run code you trust.
+      </p>
+      <label for="code">JavaScript to execute</label>
+      <textarea id="code" spellcheck="false" placeholder="document.body.style.outline = '4px solid orange';"></textarea>
+      <div class="actions">
+        <button id="run" type="button">Run in all tabs</button>
+        <button id="clear" type="button" class="secondary">Clear</button>
+      </div>
+      <pre id="status" role="status" aria-live="polite"></pre>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
