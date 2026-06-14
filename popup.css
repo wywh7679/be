@@ -113,3 +113,14 @@ button:disabled {
   overflow: auto;
   white-space: pre-wrap;
 }
+
+@media (min-width: 700px) {
+  body {
+    min-width: 0;
+  }
+
+  main {
+    margin: 0 auto;
+    max-width: 900px;
+  }
+}

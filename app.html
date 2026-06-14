@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>All Tabs Document Runner</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <h1>All Tabs Document Runner</h1>
+      <p class="warning">
+        JavaScript runs in every compatible tab and downloads can save files from matching page URLs. Only run code and save documents you trust.
+      </p>
+
+      <section aria-labelledby="script-heading">
+        <h2 id="script-heading">Run JavaScript</h2>
+        <label for="code">JavaScript to execute</label>
+        <textarea id="code" spellcheck="false" placeholder="document.body.style.outline = '4px solid orange';"></textarea>
+        <div class="actions">
+          <button id="run" type="button">Run in all tabs</button>
+          <button id="clear" type="button" class="secondary">Clear</button>
+        </div>
+      </section>
+
+      <section aria-labelledby="download-heading">
+        <h2 id="download-heading">Save documents</h2>
+        <p class="hint">Download open image/PDF tabs, collect documents with a CSS selector, or preview selected images in a gallery tab.</p>
+
+        <label for="download-folder">Download subfolder</label>
+        <input id="download-folder" type="text" placeholder="optional/subfolder">
+        <p class="field-help">Relative to Firefox's default downloads folder. Leave blank to use the default folder.</p>
+        <div class="actions">
+          <button id="clear-folder" type="button" class="secondary">Clear folder</button>
+        </div>
+
+        <div class="actions stacked">
+          <button id="download-open-documents" type="button">Save open images/PDFs</button>
+        </div>
+        <label for="selector">CSS selector for documents or images</label>
+        <input id="selector" type="text" placeholder="a[href$='.pdf'], img">
+        <div class="actions wrap">
+          <button id="download-selector-documents" type="button">Save selector matches</button>
+          <button id="preview-selector-images" type="button">Preview selector images</button>
+          <button id="clear-selector" type="button" class="secondary">Clear selector</button>
+        </div>
+      </section>
+
+      <pre id="status" role="status" aria-live="polite"></pre>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

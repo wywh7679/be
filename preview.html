@@ -10,10 +10,15 @@
     <header>
       <h1>Image Preview</h1>
       <div class="toolbar">
+        <button id="select-all" type="button">Select all</button>
+        <button id="select-none" type="button">Select none</button>
         <button id="start-slideshow" type="button">Start slideshow</button>
         <button id="stop-slideshow" type="button" disabled>Stop slideshow</button>
+        <button id="download-selected" type="button">Download selected</button>
         <button id="download-all" type="button">Download all images</button>
       </div>
+      <label class="folder-label" for="preview-download-folder">Download subfolder</label>
+      <input id="preview-download-folder" type="text" placeholder="optional/subfolder">
       <p id="summary" role="status" aria-live="polite">Loading images...</p>
     </header>
 

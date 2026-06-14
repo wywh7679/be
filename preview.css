@@ -38,8 +38,23 @@ button:disabled {
   opacity: 0.7;
 }
 
+.folder-label {
+  display: block;
+  font-weight: 600;
+  margin: 0.75rem 0 0.35rem;
+}
+
+#preview-download-folder {
+  box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  max-width: 28rem;
+  padding: 0.4rem;
+  width: 100%;
+}
+
 #summary {
   margin: 0.75rem 0 0;
+  white-space: pre-wrap;
 }
 
 .gallery {
@@ -50,19 +65,38 @@ button:disabled {
 }
 
 .thumbnail {
-  aspect-ratio: 1 / 1;
   background: rgba(127, 127, 127, 0.12);
-  border: 1px solid rgba(127, 127, 127, 0.35);
+  border: 2px solid rgba(127, 127, 127, 0.35);
   border-radius: 0.5rem;
   overflow: hidden;
-  padding: 0;
 }
 
-.thumbnail img {
+.thumbnail.selected {
+  border-color: Highlight;
+}
+
+.thumbnail-preview {
+  aspect-ratio: 1 / 1;
+  background: transparent;
+  border: 0;
+  display: block;
+  padding: 0;
+  width: 100%;
+}
+
+.thumbnail-preview img {
   display: block;
   height: 100%;
   object-fit: cover;
   width: 100%;
+}
+
+.thumbnail-select {
+  align-items: center;
+  display: flex;
+  font-weight: 600;
+  gap: 0.35rem;
+  padding: 0.5rem;
 }
 
 .lightbox {

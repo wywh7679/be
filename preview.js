@@ -1,8 +1,15 @@
-const STORAGE_KEY = "allTabsDocumentRunner.previewImages";
+const STORAGE_KEYS = {
+  previewImages: "allTabsDocumentRunner.previewImages",
+  downloadFolder: "allTabsDocumentRunner.downloadFolder"
+};
 const gallery = document.getElementById("gallery");
 const summary = document.getElementById("summary");
+const folderInput = document.getElementById("preview-download-folder");
+const selectAllButton = document.getElementById("select-all");
+const selectNoneButton = document.getElementById("select-none");
 const startSlideshowButton = document.getElementById("start-slideshow");
 const stopSlideshowButton = document.getElementById("stop-slideshow");
+const downloadSelectedButton = document.getElementById("download-selected");
 const downloadAllButton = document.getElementById("download-all");
 const lightbox = document.getElementById("lightbox");
 const lightboxImage = document.getElementById("lightbox-image");
@@ -12,9 +19,29 @@ const previousImageButton = document.getElementById("previous-image");
 const nextImageButton = document.getElementById("next-image");
 
 let images = [];
-let downloadFolder = "";
+let selectedIndexes = new Set();
 let currentIndex = 0;
 let slideshowId = null;
+
+function sanitizeFolder(folder) {
+  return folder
+    .trim()
+    .replace(/\\/g, "/")
+    .split("/")
+    .map((part) => part.replace(/[<>:"|?*\u0000-\u001F]/g, "").trim())
+    .filter((part) => part && part !== "." && part !== "..")
+    .join("/");
+}
+
+function getDownloadFolder() {
+  return sanitizeFolder(folderInput.value);
+}
+
+async function saveDownloadFolder() {
+  const sanitizedFolder = getDownloadFolder();
+  folderInput.value = sanitizedFolder;
+  await browser.storage.local.set({ [STORAGE_KEYS.downloadFolder]: sanitizedFolder });
+}
 
 function sanitizeFilenamePart(value) {
   return value.replace(/[<>:"|?*\u0000-\u001F]/g, "_").trim();
@@ -32,11 +59,40 @@ function filenameFromUrl(url, index) {
 
 function filenameForDownload(url, index) {
   const filename = filenameFromUrl(url, index);
+  const downloadFolder = getDownloadFolder();
   return downloadFolder ? `${downloadFolder}/${filename}` : filename;
 }
 
 function setSummary(message) {
   summary.textContent = message;
+}
+
+function updateSummary(message) {
+  const folder = getDownloadFolder();
+  const folderMessage = folder ? ` Downloads use ${folder}/.` : "";
+  setSummary(`${message || `Showing ${images.length} selected image${images.length === 1 ? "" : "s"}.`} ${selectedIndexes.size} selected.${folderMessage}`.trim());
+  downloadSelectedButton.disabled = selectedIndexes.size === 0;
+}
+
+function setImageSelected(index, isSelected) {
+  if (isSelected) {
+    selectedIndexes.add(index);
+  } else {
+    selectedIndexes.delete(index);
+  }
+
+  const checkbox = document.querySelector(`[data-select-index="${index}"]`);
+  const tile = document.querySelector(`[data-tile-index="${index}"]`);
+
+  if (checkbox) {
+    checkbox.checked = isSelected;
+  }
+
+  if (tile) {
+    tile.classList.toggle("selected", isSelected);
+  }
+
+  updateSummary();
 }
 
 function showImage(index) {
@@ -72,16 +128,20 @@ function stopSlideshow() {
     slideshowId = null;
   }
 
-  startSlideshowButton.disabled = false;
+  startSlideshowButton.disabled = images.length === 0;
   stopSlideshowButton.disabled = true;
 }
 
-async function downloadAllImages() {
+async function downloadImages(indexes) {
+  await saveDownloadFolder();
+  downloadSelectedButton.disabled = true;
   downloadAllButton.disabled = true;
   let downloaded = 0;
   const failures = [];
 
-  for (const [index, url] of images.entries()) {
+  for (const index of indexes) {
+    const url = images[index];
+
     try {
       await browser.downloads.download({
         conflictAction: "uniquify",
@@ -95,46 +155,97 @@ async function downloadAllImages() {
     }
   }
 
-  const folderMessage = downloadFolder ? ` to ${downloadFolder}/` : "";
-  setSummary(failures.length ? `Queued ${downloaded} image downloads${folderMessage}. Failed:\n${failures.join("\n")}` : `Queued ${downloaded} image downloads${folderMessage}.`);
-  downloadAllButton.disabled = false;
+  const folder = getDownloadFolder();
+  const folderMessage = folder ? ` to ${folder}/` : "";
+  updateSummary(failures.length ? `Queued ${downloaded} image downloads${folderMessage}. Failed:\n${failures.join("\n")}` : `Queued ${downloaded} image downloads${folderMessage}.`);
+  downloadAllButton.disabled = images.length === 0;
+  downloadSelectedButton.disabled = selectedIndexes.size === 0;
 }
 
 function renderGallery() {
   gallery.textContent = "";
 
   for (const [index, url] of images.entries()) {
-    const button = document.createElement("button");
-    button.className = "thumbnail";
-    button.type = "button";
-    button.title = url;
-    button.addEventListener("click", () => showImage(index));
+    const tile = document.createElement("article");
+    tile.className = "thumbnail";
+    tile.dataset.tileIndex = String(index);
+
+    const previewButton = document.createElement("button");
+    previewButton.className = "thumbnail-preview";
+    previewButton.type = "button";
+    previewButton.title = url;
+    previewButton.addEventListener("click", () => showImage(index));
 
     const image = document.createElement("img");
     image.alt = `Preview ${index + 1}`;
     image.loading = "lazy";
     image.src = url;
-    button.append(image);
-    gallery.append(button);
+    previewButton.append(image);
+
+    const label = document.createElement("label");
+    label.className = "thumbnail-select";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.dataset.selectIndex = String(index);
+    checkbox.addEventListener("change", () => setImageSelected(index, checkbox.checked));
+    label.append(checkbox, document.createTextNode(" Select"));
+
+    tile.append(previewButton, label);
+    gallery.append(tile);
   }
 }
 
-async function loadPreview() {
-  const saved = await browser.storage.local.get(STORAGE_KEY);
-  const preview = saved[STORAGE_KEY] || {};
-  images = Array.isArray(preview.images) ? preview.images : [];
-  downloadFolder = preview.downloadFolder || "";
-
+function selectAllImages() {
+  selectedIndexes = new Set(images.map((_url, index) => index));
   renderGallery();
-  const folderMessage = downloadFolder ? ` Downloads will use ${downloadFolder}/.` : "";
-  setSummary(`Showing ${images.length} selected image${images.length === 1 ? "" : "s"}.${folderMessage}`);
-  startSlideshowButton.disabled = images.length === 0;
-  downloadAllButton.disabled = images.length === 0;
+
+  for (const index of selectedIndexes) {
+    setImageSelected(index, true);
+  }
+
+  updateSummary();
 }
 
+function selectNoImages() {
+  selectedIndexes.clear();
+
+  for (const checkbox of document.querySelectorAll("[data-select-index]")) {
+    checkbox.checked = false;
+  }
+
+  for (const tile of document.querySelectorAll("[data-tile-index]")) {
+    tile.classList.remove("selected");
+  }
+
+  updateSummary();
+}
+
+async function loadPreview() {
+  const saved = await browser.storage.local.get(Object.values(STORAGE_KEYS));
+  const preview = saved[STORAGE_KEYS.previewImages] || {};
+  images = Array.isArray(preview.images) ? preview.images : [];
+  folderInput.value = preview.downloadFolder || saved[STORAGE_KEYS.downloadFolder] || "";
+  selectedIndexes = new Set(images.map((_url, index) => index));
+
+  renderGallery();
+  for (const index of selectedIndexes) {
+    setImageSelected(index, true);
+  }
+  updateSummary();
+  selectAllButton.disabled = images.length === 0;
+  selectNoneButton.disabled = images.length === 0;
+  startSlideshowButton.disabled = images.length === 0;
+  downloadAllButton.disabled = images.length === 0;
+  downloadSelectedButton.disabled = selectedIndexes.size === 0;
+}
+
+selectAllButton.addEventListener("click", selectAllImages);
+selectNoneButton.addEventListener("click", selectNoImages);
 startSlideshowButton.addEventListener("click", startSlideshow);
 stopSlideshowButton.addEventListener("click", stopSlideshow);
-downloadAllButton.addEventListener("click", downloadAllImages);
+downloadSelectedButton.addEventListener("click", () => downloadImages([...selectedIndexes]));
+downloadAllButton.addEventListener("click", () => downloadImages(images.map((_url, index) => index)));
+folderInput.addEventListener("change", () => saveDownloadFolder().then(() => updateSummary()));
 closeLightboxButton.addEventListener("click", closeLightbox);
 previousImageButton.addEventListener("click", () => showImage(currentIndex - 1));
 nextImageButton.addEventListener("click", () => showImage(currentIndex + 1));
