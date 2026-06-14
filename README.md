@@ -28,11 +28,11 @@ The download subfolder field is optional. When it is set, downloads are saved un
 The selector downloader runs `document.querySelectorAll()` in each compatible tab and collects URLs from matching elements' `href`, `src`, `currentSrc`, `data`, and `poster` values. Example selectors include:
 
 - `a[href$='.pdf']` to save linked PDFs.
-- `img` to save images embedded in pages.
+- `img` to save images embedded in pages, including `src="data:image/..."` inline images.
 - `video[poster]` to save video poster images.
 
 ## Previewing images
 
-**Preview selector images** collects image-like URLs from the current selector, opens a new extension tab, and displays the images as thumbnails four per row. Previewed images start selected by default. Use **Select all**, **Select none**, or individual thumbnail checkboxes to choose images, click any thumbnail to open the lightbox, use the arrow buttons or keyboard arrows to move between images, click **Start slideshow** to advance automatically, click **Download selected** to save only checked images, or click **Download all images** to save the entire preview set.
+**Preview selector images** collects image-like URLs from the current selector, including inline `data:image` URLs from `img` tags, opens a new extension tab, and displays the images as thumbnails four per row. Previewed images start selected by default. Use **Select all**, **Select none**, or individual thumbnail checkboxes to choose images, click any thumbnail to open the lightbox, use the arrow buttons or keyboard arrows to move between images, click **Start slideshow** to advance automatically, click **Download selected** to save only checked images, or click **Download all images** to save the entire preview set.
 
 Some internal pages, privileged browser pages, protected PDF viewer pages, and pages where extensions cannot inject scripts will be skipped and reported in the popup status output.

@@ -23,6 +23,10 @@ let selectedIndexes = new Set();
 let currentIndex = 0;
 let slideshowId = null;
 
+function isDataImageUrl(url) {
+  return typeof url === "string" && /^data:image\//i.test(url);
+}
+
 function sanitizeFolder(folder) {
   return folder
     .trim()
@@ -47,7 +51,21 @@ function sanitizeFilenamePart(value) {
   return value.replace(/[<>:"|?*\u0000-\u001F]/g, "_").trim();
 }
 
+function extensionFromDataImageUrl(url) {
+  const match = /^data:image\/([a-z0-9.+-]+)[;,]/i.exec(url);
+
+  if (!match) {
+    return "png";
+  }
+
+  return match[1].toLowerCase().replace("jpeg", "jpg").replace(/[^a-z0-9]/g, "") || "png";
+}
+
 function filenameFromUrl(url, index) {
+  if (isDataImageUrl(url)) {
+    return `data-image-${index + 1}.${extensionFromDataImageUrl(url)}`;
+  }
+
   try {
     const { pathname } = new URL(url);
     const rawName = decodeURIComponent(pathname.split("/").filter(Boolean).pop() || "");

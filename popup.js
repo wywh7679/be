@@ -28,12 +28,16 @@ function describeTab(tab) {
   return tab.title || tab.url || `Tab ${tab.id}`;
 }
 
+function isDataImageUrl(url) {
+  return typeof url === "string" && /^data:image\//i.test(url);
+}
+
 function isDownloadableUrl(url) {
-  return typeof url === "string" && /^(https?|file|ftp):/i.test(url);
+  return typeof url === "string" && (/^(https?|file|ftp):/i.test(url) || isDataImageUrl(url));
 }
 
 function hasExtension(url, extensions) {
-  if (!isDownloadableUrl(url)) {
+  if (!isDownloadableUrl(url) || isDataImageUrl(url)) {
     return false;
   }
 
@@ -51,7 +55,7 @@ function isDocumentUrl(url) {
 }
 
 function isImageUrl(url) {
-  return hasExtension(url, IMAGE_EXTENSIONS);
+  return isDataImageUrl(url) || hasExtension(url, IMAGE_EXTENSIONS);
 }
 
 function uniqueUrls(urls) {
@@ -68,7 +72,21 @@ function sanitizeFolder(folder) {
     .join("/");
 }
 
+function extensionFromDataImageUrl(url) {
+  const match = /^data:image\/([a-z0-9.+-]+)[;,]/i.exec(url);
+
+  if (!match) {
+    return "png";
+  }
+
+  return match[1].toLowerCase().replace("jpeg", "jpg").replace(/[^a-z0-9]/g, "") || "png";
+}
+
 function filenameFromUrl(url, index) {
+  if (isDataImageUrl(url)) {
+    return `data-image-${index + 1}.${extensionFromDataImageUrl(url)}`;
+  }
+
   try {
     const { pathname } = new URL(url);
     const rawName = decodeURIComponent(pathname.split("/").filter(Boolean).pop() || "");
