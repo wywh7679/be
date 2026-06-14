@@ -5,24 +5,47 @@
 
 body {
   margin: 0;
-  min-width: 360px;
+  min-width: 400px;
 }
 
 main {
   padding: 1rem;
 }
 
-h1 {
-  font-size: 1rem;
+h1,
+h2 {
   margin: 0 0 0.5rem;
+}
+
+h1 {
+  font-size: 1.05rem;
+}
+
+h2 {
+  font-size: 0.95rem;
+}
+
+section + section {
+  border-top: 1px solid rgba(127, 127, 127, 0.35);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.warning,
+.hint {
+  border-radius: 0.35rem;
+  margin: 0 0 0.75rem;
+  padding: 0.5rem;
 }
 
 .warning {
   background: rgba(255, 165, 0, 0.18);
   border: 1px solid rgba(255, 165, 0, 0.55);
-  border-radius: 0.35rem;
-  margin: 0 0 0.75rem;
-  padding: 0.5rem;
+}
+
+.hint {
+  background: rgba(127, 127, 127, 0.12);
+  border: 1px solid rgba(127, 127, 127, 0.35);
 }
 
 label {
@@ -31,18 +54,31 @@ label {
   margin-bottom: 0.35rem;
 }
 
+input,
 textarea {
   box-sizing: border-box;
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  min-height: 180px;
-  resize: vertical;
   width: 100%;
+}
+
+input {
+  padding: 0.4rem;
+}
+
+textarea {
+  min-height: 160px;
+  resize: vertical;
 }
 
 .actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.actions.stacked {
+  align-items: flex-start;
+  flex-direction: column;
 }
 
 button {
@@ -62,7 +98,7 @@ button:disabled {
 
 #status {
   margin: 0.75rem 0 0;
-  max-height: 160px;
+  max-height: 180px;
   overflow: auto;
   white-space: pre-wrap;
 }
