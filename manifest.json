@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "All Tabs Document Runner",
-  "version": "1.1.0",
-  "description": "Run user-supplied JavaScript and download documents from open tabs.",
+  "version": "1.2.0",
+  "description": "Run user-supplied JavaScript, preview images, and download documents from open tabs.",
   "permissions": [
     "tabs",
     "storage",
@@ -10,7 +10,7 @@
     "<all_urls>"
   ],
   "browser_action": {
-    "default_title": "Run JavaScript and save documents",
+    "default_title": "Run JavaScript, preview images, and save documents",
     "default_popup": "popup.html"
   },
   "browser_specific_settings": {

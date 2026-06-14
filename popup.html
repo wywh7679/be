@@ -25,14 +25,23 @@
 
       <section aria-labelledby="download-heading">
         <h2 id="download-heading">Save documents</h2>
-        <p class="hint">Download open image/PDF tabs, or enter a CSS selector to download linked or embedded documents from every compatible tab.</p>
+        <p class="hint">Download open image/PDF tabs, collect documents with a CSS selector, or preview selected images in a gallery tab.</p>
+
+        <label for="download-folder">Download subfolder</label>
+        <input id="download-folder" type="text" placeholder="optional/subfolder">
+        <p class="field-help">Relative to Firefox's default downloads folder. Leave blank to use the default folder.</p>
+        <div class="actions">
+          <button id="clear-folder" type="button" class="secondary">Clear folder</button>
+        </div>
+
         <div class="actions stacked">
           <button id="download-open-documents" type="button">Save open images/PDFs</button>
         </div>
-        <label for="selector">CSS selector for documents</label>
+        <label for="selector">CSS selector for documents or images</label>
         <input id="selector" type="text" placeholder="a[href$='.pdf'], img">
-        <div class="actions">
+        <div class="actions wrap">
           <button id="download-selector-documents" type="button">Save selector matches</button>
+          <button id="preview-selector-images" type="button">Preview selector images</button>
           <button id="clear-selector" type="button" class="secondary">Clear selector</button>
         </div>
       </section>

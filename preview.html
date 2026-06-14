@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Image Preview</title>
+    <link rel="stylesheet" href="preview.css">
+  </head>
+  <body>
+    <header>
+      <h1>Image Preview</h1>
+      <div class="toolbar">
+        <button id="start-slideshow" type="button">Start slideshow</button>
+        <button id="stop-slideshow" type="button" disabled>Stop slideshow</button>
+        <button id="download-all" type="button">Download all images</button>
+      </div>
+      <p id="summary" role="status" aria-live="polite">Loading images...</p>
+    </header>
+
+    <main id="gallery" class="gallery" aria-label="Selected image thumbnails"></main>
+
+    <div id="lightbox" class="lightbox" hidden>
+      <button id="close-lightbox" class="lightbox-close" type="button" aria-label="Close preview">×</button>
+      <button id="previous-image" class="lightbox-nav previous" type="button" aria-label="Previous image">‹</button>
+      <img id="lightbox-image" alt="Selected preview">
+      <button id="next-image" class="lightbox-nav next" type="button" aria-label="Next image">›</button>
+      <p id="lightbox-caption"></p>
+    </div>
+
+    <script src="preview.js"></script>
+  </body>
+</html>
