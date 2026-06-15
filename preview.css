@@ -87,7 +87,7 @@ button:disabled {
 .thumbnail-preview img {
   display: block;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   width: 100%;
 }
 

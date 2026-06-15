@@ -19,6 +19,7 @@ const previousImageButton = document.getElementById("previous-image");
 const nextImageButton = document.getElementById("next-image");
 
 let images = [];
+let displayUrls = [];
 let selectedIndexes = new Set();
 let currentIndex = 0;
 let slideshowId = null;
@@ -51,8 +52,30 @@ function sanitizeFilenamePart(value) {
   return value.replace(/[<>:"|?*\u0000-\u001F]/g, "_").trim();
 }
 
+function dataImageMimeType(url) {
+  const match = /^data:(image\/[a-z0-9.+-]+)(?:;[^,]*)?,/i.exec(url);
+  return match ? match[1].toLowerCase() : "image/png";
+}
+
+function dataImageToBlobUrl(url) {
+  const commaIndex = url.indexOf(",");
+
+  if (commaIndex === -1) {
+    throw new Error("Invalid data image URL");
+  }
+
+  const metadata = url.slice(0, commaIndex);
+  const payload = url.slice(commaIndex + 1);
+  const mimeType = dataImageMimeType(url);
+  const isBase64 = /;base64(?:;|$)/i.test(metadata);
+  const bytes = isBase64
+    ? Uint8Array.from(atob(payload), (character) => character.charCodeAt(0))
+    : new TextEncoder().encode(decodeURIComponent(payload));
+  return URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+}
+
 function extensionFromDataImageUrl(url) {
-  const match = /^data:image\/([a-z0-9.+-]+)[;,]/i.exec(url);
+  const match = /^data:image\/([a-z0-9.+-]+)(?:;[^,]*)?,/i.exec(url);
 
   if (!match) {
     return "png";
@@ -113,14 +136,18 @@ function setImageSelected(index, isSelected) {
   updateSummary();
 }
 
+function labelForImage(url, index) {
+  return isDataImageUrl(url) ? `${index + 1} of ${images.length}: inline data image` : `${index + 1} of ${images.length}: ${url}`;
+}
+
 function showImage(index) {
   if (!images.length) {
     return;
   }
 
   currentIndex = (index + images.length) % images.length;
-  lightboxImage.src = images[currentIndex];
-  lightboxCaption.textContent = `${currentIndex + 1} of ${images.length}: ${images[currentIndex]}`;
+  lightboxImage.src = displayUrls[currentIndex] || images[currentIndex];
+  lightboxCaption.textContent = labelForImage(images[currentIndex], currentIndex);
   lightbox.hidden = false;
 }
 
@@ -165,7 +192,7 @@ async function downloadImages(indexes) {
         conflictAction: "uniquify",
         filename: filenameForDownload(url, index),
         saveAs: false,
-        url
+        url: displayUrls[index] || url
       });
       downloaded += 1;
     } catch (error) {
@@ -197,7 +224,7 @@ function renderGallery() {
     const image = document.createElement("img");
     image.alt = `Preview ${index + 1}`;
     image.loading = "lazy";
-    image.src = url;
+    image.src = displayUrls[index] || url;
     previewButton.append(image);
 
     const label = document.createElement("label");
@@ -242,6 +269,7 @@ async function loadPreview() {
   const saved = await browser.storage.local.get(Object.values(STORAGE_KEYS));
   const preview = saved[STORAGE_KEYS.previewImages] || {};
   images = Array.isArray(preview.images) ? preview.images : [];
+  displayUrls = images.map((url) => (isDataImageUrl(url) ? dataImageToBlobUrl(url) : url));
   folderInput.value = preview.downloadFolder || saved[STORAGE_KEYS.downloadFolder] || "";
   selectedIndexes = new Set(images.map((_url, index) => index));
 
@@ -274,6 +302,14 @@ window.addEventListener("keydown", (event) => {
     showImage(currentIndex - 1);
   } else if (event.key === "ArrowRight") {
     showImage(currentIndex + 1);
+  }
+});
+
+window.addEventListener("pagehide", () => {
+  for (const url of displayUrls) {
+    if (url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
   }
 });
 

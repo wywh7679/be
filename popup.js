@@ -72,8 +72,30 @@ function sanitizeFolder(folder) {
     .join("/");
 }
 
+function dataImageMimeType(url) {
+  const match = /^data:(image\/[a-z0-9.+-]+)(?:;[^,]*)?,/i.exec(url);
+  return match ? match[1].toLowerCase() : "image/png";
+}
+
+function dataImageToBlobUrl(url) {
+  const commaIndex = url.indexOf(",");
+
+  if (commaIndex === -1) {
+    throw new Error("Invalid data image URL");
+  }
+
+  const metadata = url.slice(0, commaIndex);
+  const payload = url.slice(commaIndex + 1);
+  const mimeType = dataImageMimeType(url);
+  const isBase64 = /;base64(?:;|$)/i.test(metadata);
+  const bytes = isBase64
+    ? Uint8Array.from(atob(payload), (character) => character.charCodeAt(0))
+    : new TextEncoder().encode(decodeURIComponent(payload));
+  return URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+}
+
 function extensionFromDataImageUrl(url) {
-  const match = /^data:image\/([a-z0-9.+-]+)[;,]/i.exec(url);
+  const match = /^data:image\/([a-z0-9.+-]+)(?:;[^,]*)?,/i.exec(url);
 
   if (!match) {
     return "png";
@@ -102,13 +124,21 @@ function filenameForDownload(url, index, folder = getDownloadFolder()) {
   return folder ? `${folder}/${filename}` : filename;
 }
 
-function downloadUrl(url, index, folder = getDownloadFolder()) {
-  return browser.downloads.download({
-    conflictAction: "uniquify",
-    filename: filenameForDownload(url, index, folder),
-    saveAs: false,
-    url
-  });
+async function downloadUrl(url, index, folder = getDownloadFolder()) {
+  const downloadSource = isDataImageUrl(url) ? dataImageToBlobUrl(url) : url;
+
+  try {
+    return await browser.downloads.download({
+      conflictAction: "uniquify",
+      filename: filenameForDownload(url, index, folder),
+      saveAs: false,
+      url: downloadSource
+    });
+  } finally {
+    if (downloadSource !== url) {
+      window.setTimeout(() => URL.revokeObjectURL(downloadSource), 30000);
+    }
+  }
 }
 
 function getDownloadFolder() {
