@@ -41,7 +41,8 @@ static async Task HandleRequest(HttpListenerContext context)
                 name = "All Tabs Desktop Helper",
                 version = "2.0.0",
                 provider = "nvidia-rtx-desktop-manager-hotkeys",
-                configuredDesktops = config.Desktops.Count
+                configuredDesktops = config.Desktops.Count,
+                inputSize = Marshal.SizeOf<Input>()
             });
             return;
         }
@@ -279,23 +280,17 @@ static class RtxDesktopExtensions
     public static string NameOrId(this RtxDesktop desktop) => string.IsNullOrWhiteSpace(desktop.Name) ? desktop.Id : desktop.Name;
 }
 
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Explicit, Size = 40)]
 struct Input
 {
-    public uint Type;
-    public InputUnion Union;
-
-    public KeyboardInput KeyboardInput
-    {
-        get => Union.KeyboardInput;
-        set => Union.KeyboardInput = value;
-    }
-}
-
-[StructLayout(LayoutKind.Explicit)]
-struct InputUnion
-{
     [FieldOffset(0)]
+    public uint Type;
+
+    // INPUT contains a DWORD type followed by pointer-aligned union data.
+    // On the win-x64 helper target the union begins at byte 8, making
+    // sizeof(INPUT) 40. Passing 32 here causes SendInput to fail with
+    // ERROR_INVALID_PARAMETER (87).
+    [FieldOffset(8)]
     public KeyboardInput KeyboardInput;
 }
 

@@ -23,7 +23,7 @@ The executable is written to `bin\Release\net8.0-windows\win-x64\publish\AllTabs
 
 ## Troubleshooting
 
-If the helper reports `SendInput sent 0 ...`, rebuild from the current source. The helper now uses the Win32 `INPUT` union layout required by `SendInput` on 64-bit Windows and includes `GetLastWin32Error` plus the input structure size in any future SendInput failure message.
+If the helper reports `SendInput sent 0 ...`, rebuild from the current source. The helper now uses the Win32 `INPUT` layout required by `SendInput` on 64-bit Windows. The `/status` endpoint should report `inputSize: 40` for the win-x64 helper target. If `SendInput` fails again, the error includes `GetLastWin32Error` plus the input structure size.
 
 ## Endpoints
 
