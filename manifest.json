@@ -7,6 +7,8 @@
     "tabs",
     "storage",
     "downloads",
+    "http://127.0.0.1:7678/*",
+    "http://localhost:7678/*",
     "<all_urls>"
   ],
   "browser_action": {

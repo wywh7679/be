@@ -18,7 +18,10 @@
         <div class="actions wrap">
           <button id="minimize-windows" type="button">Minimize other windows</button>
           <button id="restore-minimized-windows" type="button">Restore minimized windows</button>
+          <button id="refresh-desktop-helper" type="button" class="secondary">Check desktop helper</button>
         </div>
+        <p class="helper-status">Desktop helper: <span id="desktop-helper-status">Not checked</span></p>
+        <div id="desktop-buttons" class="actions wrap" aria-live="polite"></div>
       </section>
 
       <nav class="tabs" aria-label="Runner sections">

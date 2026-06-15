@@ -6,10 +6,11 @@ A Firefox browser extension that opens as a full-page tool for running JavaScrip
 
 - `manifest.json` declares the Firefox WebExtension, toolbar button, background script, and permissions required to enumerate tabs, persist snippets/selectors/folders/previews, inject scripts, open extension tabs, and queue downloads.
 - `background.js` opens the full-page extension UI when the toolbar button is clicked.
-- `app.html`, `popup.css`, and `popup.js` provide the tabbed full-page UI for Run/Save, Tab/Window, and Profiles workflows, plus field profiles, saved tab/window sets, JavaScript execution, optional jQuery injection, domain-limited tab targeting, download subfolder selection, document downloads, image previews, and browser-window minimize/restore actions.
+- `app.html`, `popup.css`, and `popup.js` provide the tabbed full-page UI for Run/Save, Tab/Window, and Profiles workflows, plus field profiles, saved tab/window sets, JavaScript execution, optional jQuery injection, domain-limited tab targeting, download subfolder selection, document downloads, image previews, browser-window minimize/restore actions, and optional desktop-helper integration.
 - `popup.html` remains available as a compact standalone version of the same UI.
 - `vendor/jquery.min.js` is injected into compatible tabs before user code when the jQuery option is enabled and jQuery is not already loaded in the extension content-script context.
 - `preview.html`, `preview.css`, and `preview.js` render selected images as a four-column thumbnail gallery with multiselect controls, a clickable lightbox, slideshow controls, a preview-page subfolder field, and selected/all download buttons.
+- `windows-helper/` contains an optional Windows 10+ .NET helper executable project that listens on localhost port 7678 and moves Firefox windows between Windows virtual desktops.
 
 ## Development install
 
@@ -22,6 +23,10 @@ A Firefox browser extension that opens as a full-page tool for running JavaScrip
 7. Optionally enter a relative download subfolder, such as `research/images`.
 8. Leave **Load jQuery in each tab before running code** checked if your snippet needs `$`/`jQuery`; the extension injects its bundled jQuery only when jQuery is not already available.
 9. Enter JavaScript and click **Run in all tabs**, click **Save open images/PDFs**, enter a CSS selector and click **Save selector matches**, or click **Preview selector images**.
+
+## Optional Windows desktop helper
+
+The extension can connect to an optional helper at `http://127.0.0.1:7678`. Build and run `windows-helper/AllTabsDesktopHelper.exe` outside Firefox to enable the desktop status indicator and generated **Move Firefox windows to Desktop N** buttons. The helper exposes `/status`, `/desktops`, and `/move-firefox-windows`, and uses Windows' `IVirtualDesktopManager` COM API to move top-level Firefox windows to the selected virtual desktop.
 
 ## Window actions and UI tabs
 

@@ -25,6 +25,9 @@ const tabButtons = [...document.querySelectorAll(".tab")];
 const tabPanels = [...document.querySelectorAll(".tab-panel")];
 const minimizeWindowsButton = document.getElementById("minimize-windows");
 const restoreMinimizedWindowsButton = document.getElementById("restore-minimized-windows");
+const refreshDesktopHelperButton = document.getElementById("refresh-desktop-helper");
+const desktopHelperStatus = document.getElementById("desktop-helper-status");
+const desktopButtons = document.getElementById("desktop-buttons");
 
 const STORAGE_KEYS = {
   code: "allTabsDocumentRunner.code",
@@ -202,6 +205,7 @@ function setBusy(isBusy) {
   deleteTabSetButton.disabled = isBusy;
   minimizeWindowsButton.disabled = isBusy;
   restoreMinimizedWindowsButton.disabled = isBusy;
+  refreshDesktopHelperButton.disabled = isBusy;
   downloadOpenDocumentsButton.disabled = isBusy;
   downloadSelectorDocumentsButton.disabled = isBusy;
   previewSelectorImagesButton.disabled = isBusy;
@@ -259,6 +263,70 @@ async function restoreMinimizedWindows() {
   }
 }
 
+
+async function fetchDesktopHelper(path, options = {}) {
+  const response = await fetch(`http://127.0.0.1:7678${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  const payload = await response.json();
+
+  if (!response.ok || payload.ok === false) {
+    throw new Error(payload.error || `Desktop helper returned HTTP ${response.status}`);
+  }
+
+  return payload;
+}
+
+function setDesktopHelperStatus(message, isConnected) {
+  desktopHelperStatus.textContent = message;
+  desktopHelperStatus.className = isConnected ? "connected" : "disconnected";
+}
+
+function renderDesktopButtons(desktops) {
+  desktopButtons.textContent = "";
+
+  if (!desktops.length) {
+    desktopButtons.textContent = "No virtual desktops reported by helper.";
+    return;
+  }
+
+  for (const desktop of desktops) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = `Move Firefox windows to ${desktop.name}`;
+    button.addEventListener("click", () => moveFirefoxWindowsToDesktop(desktop.id, desktop.name));
+    desktopButtons.append(button);
+  }
+}
+
+async function refreshDesktopHelperStatus() {
+  try {
+    await fetchDesktopHelper("/status");
+    const { desktops = [] } = await fetchDesktopHelper("/desktops");
+    setDesktopHelperStatus(`Connected (${desktops.length} desktop${desktops.length === 1 ? "" : "s"})`, true);
+    renderDesktopButtons(desktops);
+  } catch (error) {
+    setDesktopHelperStatus(`Not connected: ${error.message}`, false);
+    desktopButtons.textContent = "Start AllTabsDesktopHelper.exe, then check again.";
+  }
+}
+
+async function moveFirefoxWindowsToDesktop(desktopId, desktopName) {
+  try {
+    const result = await fetchDesktopHelper("/move-firefox-windows", {
+      method: "POST",
+      body: JSON.stringify({ desktopId })
+    });
+    setStatus(`Moved ${result.moved} Firefox window${result.moved === 1 ? "" : "s"} to ${desktopName}.`);
+  } catch (error) {
+    setStatus(`Failed to move Firefox windows: ${error.message}`);
+  }
+}
 
 async function restoreSavedValues() {
   const savedValues = await browser.storage.local.get(Object.values(STORAGE_KEYS));
@@ -713,6 +781,7 @@ for (const tabButton of tabButtons) {
 }
 minimizeWindowsButton.addEventListener("click", minimizeOtherWindows);
 restoreMinimizedWindowsButton.addEventListener("click", restoreMinimizedWindows);
+refreshDesktopHelperButton.addEventListener("click", refreshDesktopHelperStatus);
 runButton.addEventListener("click", runInAllTabs);
 clearButton.addEventListener("click", async () => {
   codeInput.value = "";
@@ -751,3 +820,4 @@ domainFilterInput.addEventListener("change", saveDomainFilter);
 ensureJQueryInput.addEventListener("change", saveEnsureJQuery);
 
 restoreSavedValues().catch((error) => setStatus(`Failed to restore saved values: ${error.message}`));
+refreshDesktopHelperStatus();

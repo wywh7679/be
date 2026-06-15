@@ -171,3 +171,17 @@ button:disabled {
 .tab-panel[hidden] {
   display: none;
 }
+
+.helper-status {
+  margin: 0.5rem 0;
+}
+
+.connected {
+  color: #127c12;
+  font-weight: 700;
+}
+
+.disconnected {
+  color: #b00020;
+  font-weight: 700;
+}
