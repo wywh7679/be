@@ -21,6 +21,10 @@ The executable is written to `bin\Release\net8.0-windows\win-x64\publish\AllTabs
 3. Edit each `id`, `name`, and `hotkey` entry so it matches the NVIDIA RTX Desktop Manager hotkeys you configured.
 4. Start `AllTabsDesktopHelper.exe` outside Firefox. The extension status indicator will show whether it can connect and will create one move button per configured desktop.
 
+## Troubleshooting
+
+If the helper reports `SendInput sent 0 ...`, rebuild from the current source. The helper now uses the Win32 `INPUT` union layout required by `SendInput` on 64-bit Windows and includes `GetLastWin32Error` plus the input structure size in any future SendInput failure message.
+
 ## Endpoints
 
 - `GET /status` returns helper availability and configured desktop count.

@@ -223,7 +223,8 @@ sealed class Hotkey
 
         if (sent != inputs.Count)
         {
-            throw new InvalidOperationException($"SendInput sent {sent} of {inputs.Count} keyboard events.");
+            var lastError = Marshal.GetLastWin32Error();
+            throw new InvalidOperationException($"SendInput sent {sent} of {inputs.Count} keyboard events. GetLastWin32Error={lastError}, InputSize={Marshal.SizeOf<Input>()}.");
         }
     }
 
@@ -282,6 +283,19 @@ static class RtxDesktopExtensions
 struct Input
 {
     public uint Type;
+    public InputUnion Union;
+
+    public KeyboardInput KeyboardInput
+    {
+        get => Union.KeyboardInput;
+        set => Union.KeyboardInput = value;
+    }
+}
+
+[StructLayout(LayoutKind.Explicit)]
+struct InputUnion
+{
+    [FieldOffset(0)]
     public KeyboardInput KeyboardInput;
 }
 
