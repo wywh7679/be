@@ -27,6 +27,20 @@
         </div>
       </section>
 
+      <section aria-labelledby="tabsets-heading">
+        <h2 id="tabsets-heading">Tab/window sets</h2>
+        <p class="hint">Save all open normal windows and tabs, then restore them later.</p>
+        <label for="tabset-name">Tab set name</label>
+        <input id="tabset-name" type="text" placeholder="Example: Morning research">
+        <label for="tabset-select">Saved tab sets</label>
+        <select id="tabset-select"></select>
+        <div class="actions wrap">
+          <button id="save-tabset" type="button">Save open tabs/windows</button>
+          <button id="restore-tabset" type="button">Restore tab set</button>
+          <button id="delete-tabset" type="button" class="secondary">Delete tab set</button>
+        </div>
+      </section>
+
       <section aria-labelledby="script-heading">
         <h2 id="script-heading">Run JavaScript</h2>
         <label for="code">JavaScript to execute</label>

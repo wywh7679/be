@@ -4,6 +4,8 @@ const ensureJQueryInput = document.getElementById("ensure-jquery");
 const domainFilterInput = document.getElementById("domain-filter");
 const profileNameInput = document.getElementById("profile-name");
 const profileSelect = document.getElementById("profile-select");
+const tabSetNameInput = document.getElementById("tabset-name");
+const tabSetSelect = document.getElementById("tabset-select");
 const downloadFolderInput = document.getElementById("download-folder");
 const runButton = document.getElementById("run");
 const clearButton = document.getElementById("clear");
@@ -11,6 +13,9 @@ const clearFolderButton = document.getElementById("clear-folder");
 const saveProfileButton = document.getElementById("save-profile");
 const loadProfileButton = document.getElementById("load-profile");
 const deleteProfileButton = document.getElementById("delete-profile");
+const saveTabSetButton = document.getElementById("save-tabset");
+const restoreTabSetButton = document.getElementById("restore-tabset");
+const deleteTabSetButton = document.getElementById("delete-tabset");
 const downloadOpenDocumentsButton = document.getElementById("download-open-documents");
 const downloadSelectorDocumentsButton = document.getElementById("download-selector-documents");
 const previewSelectorImagesButton = document.getElementById("preview-selector-images");
@@ -24,6 +29,7 @@ const STORAGE_KEYS = {
   ensureJQuery: "allTabsDocumentRunner.ensureJQuery",
   domainFilter: "allTabsDocumentRunner.domainFilter",
   profiles: "allTabsDocumentRunner.profiles",
+  tabSets: "allTabsDocumentRunner.tabSets",
   previewImages: "allTabsDocumentRunner.previewImages"
 };
 
@@ -187,6 +193,9 @@ function setBusy(isBusy) {
   saveProfileButton.disabled = isBusy;
   loadProfileButton.disabled = isBusy;
   deleteProfileButton.disabled = isBusy;
+  saveTabSetButton.disabled = isBusy;
+  restoreTabSetButton.disabled = isBusy;
+  deleteTabSetButton.disabled = isBusy;
   downloadOpenDocumentsButton.disabled = isBusy;
   downloadSelectorDocumentsButton.disabled = isBusy;
   previewSelectorImagesButton.disabled = isBusy;
@@ -201,6 +210,7 @@ async function restoreSavedValues() {
   domainFilterInput.value = savedValues[STORAGE_KEYS.domainFilter] || "";
   ensureJQueryInput.checked = savedValues[STORAGE_KEYS.ensureJQuery] !== false;
   renderProfiles(savedValues[STORAGE_KEYS.profiles] || {});
+  renderTabSets(savedValues[STORAGE_KEYS.tabSets] || {});
 }
 
 async function saveCode() {
@@ -314,6 +324,117 @@ async function deleteProfile() {
   renderProfiles(profiles);
   profileNameInput.value = "";
   setStatus(`Deleted profile: ${name}`);
+}
+
+function renderTabSets(tabSets) {
+  tabSetSelect.textContent = "";
+  const names = Object.keys(tabSets).sort((a, b) => a.localeCompare(b));
+
+  if (!names.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No saved tab sets";
+    tabSetSelect.append(option);
+    return;
+  }
+
+  for (const name of names) {
+    const option = document.createElement("option");
+    option.value = name;
+    const windowCount = tabSets[name].windows?.length || 0;
+    option.textContent = `${name} (${windowCount} window${windowCount === 1 ? "" : "s"})`;
+    tabSetSelect.append(option);
+  }
+}
+
+async function getTabSets() {
+  const savedValues = await browser.storage.local.get(STORAGE_KEYS.tabSets);
+  return savedValues[STORAGE_KEYS.tabSets] || {};
+}
+
+function serializableTab(tab) {
+  return {
+    active: Boolean(tab.active),
+    pinned: Boolean(tab.pinned),
+    title: tab.title || "",
+    url: tab.url || ""
+  };
+}
+
+async function saveTabSet() {
+  const name = tabSetNameInput.value.trim() || tabSetSelect.value;
+
+  if (!name) {
+    setStatus("Enter a tab set name before saving.");
+    return;
+  }
+
+  const windows = await browser.windows.getAll({ populate: true, windowTypes: ["normal"] });
+  const tabSets = await getTabSets();
+  tabSets[name] = {
+    createdAt: Date.now(),
+    windows: windows.map((windowInfo) => ({
+      focused: Boolean(windowInfo.focused),
+      tabs: (windowInfo.tabs || []).map(serializableTab).filter((tab) => tab.url)
+    })).filter((windowInfo) => windowInfo.tabs.length)
+  };
+
+  await browser.storage.local.set({ [STORAGE_KEYS.tabSets]: tabSets });
+  renderTabSets(tabSets);
+  tabSetSelect.value = name;
+  tabSetNameInput.value = name;
+  setStatus(`Saved tab set: ${name}`);
+}
+
+async function restoreTabSet() {
+  const name = tabSetSelect.value;
+  const tabSets = await getTabSets();
+  const tabSet = tabSets[name];
+
+  if (!tabSet) {
+    setStatus("Select a saved tab set to restore.");
+    return;
+  }
+
+  let restoredTabs = 0;
+
+  for (const windowInfo of tabSet.windows || []) {
+    const urls = (windowInfo.tabs || []).map((tab) => tab.url).filter(Boolean);
+
+    if (!urls.length) {
+      continue;
+    }
+
+    const createdWindow = await browser.windows.create({ url: urls });
+    restoredTabs += urls.length;
+    const createdTabs = createdWindow.tabs || [];
+
+    for (const [index, savedTab] of (windowInfo.tabs || []).entries()) {
+      const createdTab = createdTabs[index];
+
+      if (createdTab?.id && savedTab.pinned) {
+        await browser.tabs.update(createdTab.id, { pinned: true });
+      }
+    }
+  }
+
+  setStatus(`Restored tab set: ${name} (${restoredTabs} tabs).`);
+}
+
+async function deleteTabSet() {
+  const name = tabSetSelect.value;
+  const tabSets = await getTabSets();
+
+  if (!name || !tabSets[name]) {
+    setStatus("Select a saved tab set to delete.");
+    return;
+  }
+
+  delete tabSets[name];
+  await browser.storage.local.set({ [STORAGE_KEYS.tabSets]: tabSets });
+  renderTabSets(tabSets);
+  tabSetNameInput.value = "";
+  setStatus(`Deleted tab set: ${name}`);
 }
 
 async function ensureJQuery(tabId) {
@@ -543,6 +664,9 @@ clearFolderButton.addEventListener("click", async () => {
 saveProfileButton.addEventListener("click", saveProfile);
 loadProfileButton.addEventListener("click", loadProfile);
 deleteProfileButton.addEventListener("click", deleteProfile);
+saveTabSetButton.addEventListener("click", saveTabSet);
+restoreTabSetButton.addEventListener("click", restoreTabSet);
+deleteTabSetButton.addEventListener("click", deleteTabSet);
 downloadOpenDocumentsButton.addEventListener("click", saveOpenDocuments);
 downloadSelectorDocumentsButton.addEventListener("click", saveSelectorDocuments);
 previewSelectorImagesButton.addEventListener("click", previewSelectorImages);
@@ -555,6 +679,9 @@ codeInput.addEventListener("input", saveCode);
 selectorInput.addEventListener("input", saveSelector);
 profileSelect.addEventListener("change", () => {
   profileNameInput.value = profileSelect.value;
+});
+tabSetSelect.addEventListener("change", () => {
+  tabSetNameInput.value = tabSetSelect.value;
 });
 downloadFolderInput.addEventListener("change", saveDownloadFolder);
 domainFilterInput.addEventListener("change", saveDomainFilter);
