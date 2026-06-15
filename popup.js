@@ -25,7 +25,6 @@ const tabButtons = [...document.querySelectorAll(".tab")];
 const tabPanels = [...document.querySelectorAll(".tab-panel")];
 const minimizeWindowsButton = document.getElementById("minimize-windows");
 const restoreMinimizedWindowsButton = document.getElementById("restore-minimized-windows");
-const moveDesktopButton = document.getElementById("move-desktop");
 
 const STORAGE_KEYS = {
   code: "allTabsDocumentRunner.code",
@@ -203,7 +202,6 @@ function setBusy(isBusy) {
   deleteTabSetButton.disabled = isBusy;
   minimizeWindowsButton.disabled = isBusy;
   restoreMinimizedWindowsButton.disabled = isBusy;
-  moveDesktopButton.disabled = true;
   downloadOpenDocumentsButton.disabled = isBusy;
   downloadSelectorDocumentsButton.disabled = isBusy;
   previewSelectorImagesButton.disabled = isBusy;
@@ -261,9 +259,6 @@ async function restoreMinimizedWindows() {
   }
 }
 
-function explainDesktopMoveUnavailable() {
-  setStatus("Moving Firefox windows between operating-system virtual desktops is not exposed by the WebExtensions windows API, so desktop-specific move buttons cannot be generated.");
-}
 
 async function restoreSavedValues() {
   const savedValues = await browser.storage.local.get(Object.values(STORAGE_KEYS));
@@ -718,7 +713,6 @@ for (const tabButton of tabButtons) {
 }
 minimizeWindowsButton.addEventListener("click", minimizeOtherWindows);
 restoreMinimizedWindowsButton.addEventListener("click", restoreMinimizedWindows);
-moveDesktopButton.addEventListener("click", explainDesktopMoveUnavailable);
 runButton.addEventListener("click", runInAllTabs);
 clearButton.addEventListener("click", async () => {
   codeInput.value = "";

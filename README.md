@@ -25,7 +25,7 @@ A Firefox browser extension that opens as a full-page tool for running JavaScrip
 
 ## Window actions and UI tabs
 
-The runner UI is split into **Run/Save**, **Tab/Window**, and **Profiles** tabs. Above those tabs, **Minimize other windows** minimizes normal Firefox windows except the current runner window, while **Restore minimized windows** restores normal Firefox windows whose state is minimized. Firefox WebExtensions do not expose operating-system virtual desktop enumeration or movement, so buttons for moving windows to each available desktop cannot be generated from within the extension.
+The runner UI is split into **Run/Save**, **Tab/Window**, and **Profiles** tabs. Above those tabs, **Minimize other windows** minimizes normal Firefox windows except the current runner window, while **Restore minimized windows** restores normal Firefox windows whose state is minimized.
 
 ## Profiles and domain filters
 
