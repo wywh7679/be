@@ -142,3 +142,32 @@ button:disabled {
 .inline-option input {
   width: auto;
 }
+
+.top-actions {
+  border-bottom: 1px solid rgba(127, 127, 127, 0.35);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.tabs {
+  border-bottom: 1px solid rgba(127, 127, 127, 0.35);
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-bottom: 0;
+  border-radius: 0.35rem 0.35rem 0 0;
+  margin-bottom: -1px;
+}
+
+.tab.active {
+  background: Highlight;
+  color: HighlightText;
+}
+
+.tab-panel[hidden] {
+  display: none;
+}

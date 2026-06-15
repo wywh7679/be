@@ -6,7 +6,7 @@ A Firefox browser extension that opens as a full-page tool for running JavaScrip
 
 - `manifest.json` declares the Firefox WebExtension, toolbar button, background script, and permissions required to enumerate tabs, persist snippets/selectors/folders/previews, inject scripts, open extension tabs, and queue downloads.
 - `background.js` opens the full-page extension UI when the toolbar button is clicked.
-- `app.html`, `popup.css`, and `popup.js` provide the full-page UI for field profiles, saved tab/window sets, JavaScript execution, optional jQuery injection, domain-limited tab targeting, download subfolder selection, document downloads, and image previews.
+- `app.html`, `popup.css`, and `popup.js` provide the tabbed full-page UI for Run/Save, Tab/Window, and Profiles workflows, plus field profiles, saved tab/window sets, JavaScript execution, optional jQuery injection, domain-limited tab targeting, download subfolder selection, document downloads, image previews, and browser-window minimize/restore actions.
 - `popup.html` remains available as a compact standalone version of the same UI.
 - `vendor/jquery.min.js` is injected into compatible tabs before user code when the jQuery option is enabled and jQuery is not already loaded in the extension content-script context.
 - `preview.html`, `preview.css`, and `preview.js` render selected images as a four-column thumbnail gallery with multiselect controls, a clickable lightbox, slideshow controls, a preview-page subfolder field, and selected/all download buttons.
@@ -16,12 +16,16 @@ A Firefox browser extension that opens as a full-page tool for running JavaScrip
 1. Open Firefox and go to `about:debugging#/runtime/this-firefox`.
 2. Click **Load Temporary Add-on...**.
 3. Select this repository's `manifest.json`.
-4. Click the extension toolbar button to open the full-page extension UI.
+4. Click the extension toolbar button to open the full-page extension UI. Use the **Run/Save**, **Tab/Window**, and **Profiles** tabs to switch between settings groups.
 5. Optionally save or load a field profile to populate the code, selector, folder, jQuery, and domain filter fields, or save/restore a tab set for all currently open normal windows and tabs.
 6. Optionally enter a domain filter, such as `example.com`, to include only matching tabs and subdomains.
 7. Optionally enter a relative download subfolder, such as `research/images`.
 8. Leave **Load jQuery in each tab before running code** checked if your snippet needs `$`/`jQuery`; the extension injects its bundled jQuery only when jQuery is not already available.
 9. Enter JavaScript and click **Run in all tabs**, click **Save open images/PDFs**, enter a CSS selector and click **Save selector matches**, or click **Preview selector images**.
+
+## Window actions and UI tabs
+
+The runner UI is split into **Run/Save**, **Tab/Window**, and **Profiles** tabs. Above those tabs, **Minimize other windows** minimizes normal Firefox windows except the current runner window, while **Restore minimized windows** restores normal Firefox windows whose state is minimized. Firefox WebExtensions do not expose operating-system virtual desktop enumeration or movement, so buttons for moving windows to each available desktop cannot be generated from within the extension.
 
 ## Profiles and domain filters
 

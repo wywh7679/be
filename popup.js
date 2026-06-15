@@ -21,6 +21,11 @@ const downloadSelectorDocumentsButton = document.getElementById("download-select
 const previewSelectorImagesButton = document.getElementById("preview-selector-images");
 const clearSelectorButton = document.getElementById("clear-selector");
 const statusOutput = document.getElementById("status");
+const tabButtons = [...document.querySelectorAll(".tab")];
+const tabPanels = [...document.querySelectorAll(".tab-panel")];
+const minimizeWindowsButton = document.getElementById("minimize-windows");
+const restoreMinimizedWindowsButton = document.getElementById("restore-minimized-windows");
+const moveDesktopButton = document.getElementById("move-desktop");
 
 const STORAGE_KEYS = {
   code: "allTabsDocumentRunner.code",
@@ -196,10 +201,68 @@ function setBusy(isBusy) {
   saveTabSetButton.disabled = isBusy;
   restoreTabSetButton.disabled = isBusy;
   deleteTabSetButton.disabled = isBusy;
+  minimizeWindowsButton.disabled = isBusy;
+  restoreMinimizedWindowsButton.disabled = isBusy;
+  moveDesktopButton.disabled = true;
   downloadOpenDocumentsButton.disabled = isBusy;
   downloadSelectorDocumentsButton.disabled = isBusy;
   previewSelectorImagesButton.disabled = isBusy;
   clearSelectorButton.disabled = isBusy;
+}
+
+function activateTab(tabButton) {
+  for (const button of tabButtons) {
+    const isActive = button === tabButton;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  }
+
+  for (const panel of tabPanels) {
+    const isActive = panel.id === tabButton.getAttribute("aria-controls");
+    panel.classList.toggle("active", isActive);
+    panel.hidden = !isActive;
+  }
+}
+
+async function minimizeOtherWindows() {
+  try {
+    const currentWindow = await browser.windows.getCurrent();
+    const windows = await browser.windows.getAll({ windowTypes: ["normal"] });
+    let minimized = 0;
+
+    for (const windowInfo of windows) {
+      if (windowInfo.id !== currentWindow.id && windowInfo.state !== "minimized") {
+        await browser.windows.update(windowInfo.id, { state: "minimized" });
+        minimized += 1;
+      }
+    }
+
+    setStatus(`Minimized ${minimized} other browser window${minimized === 1 ? "" : "s"}.`);
+  } catch (error) {
+    setStatus(`Failed to minimize windows: ${error.message}`);
+  }
+}
+
+async function restoreMinimizedWindows() {
+  try {
+    const windows = await browser.windows.getAll({ windowTypes: ["normal"] });
+    let restored = 0;
+
+    for (const windowInfo of windows) {
+      if (windowInfo.state === "minimized") {
+        await browser.windows.update(windowInfo.id, { state: "normal" });
+        restored += 1;
+      }
+    }
+
+    setStatus(`Restored ${restored} minimized browser window${restored === 1 ? "" : "s"}.`);
+  } catch (error) {
+    setStatus(`Failed to restore minimized windows: ${error.message}`);
+  }
+}
+
+function explainDesktopMoveUnavailable() {
+  setStatus("Moving Firefox windows between operating-system virtual desktops is not exposed by the WebExtensions windows API, so desktop-specific move buttons cannot be generated.");
 }
 
 async function restoreSavedValues() {
@@ -650,6 +713,12 @@ async function previewSelectorImages() {
   }
 }
 
+for (const tabButton of tabButtons) {
+  tabButton.addEventListener("click", () => activateTab(tabButton));
+}
+minimizeWindowsButton.addEventListener("click", minimizeOtherWindows);
+restoreMinimizedWindowsButton.addEventListener("click", restoreMinimizedWindows);
+moveDesktopButton.addEventListener("click", explainDesktopMoveUnavailable);
 runButton.addEventListener("click", runInAllTabs);
 clearButton.addEventListener("click", async () => {
   codeInput.value = "";
