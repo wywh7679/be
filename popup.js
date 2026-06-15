@@ -1,10 +1,16 @@
 const codeInput = document.getElementById("code");
 const selectorInput = document.getElementById("selector");
 const ensureJQueryInput = document.getElementById("ensure-jquery");
+const domainFilterInput = document.getElementById("domain-filter");
+const profileNameInput = document.getElementById("profile-name");
+const profileSelect = document.getElementById("profile-select");
 const downloadFolderInput = document.getElementById("download-folder");
 const runButton = document.getElementById("run");
 const clearButton = document.getElementById("clear");
 const clearFolderButton = document.getElementById("clear-folder");
+const saveProfileButton = document.getElementById("save-profile");
+const loadProfileButton = document.getElementById("load-profile");
+const deleteProfileButton = document.getElementById("delete-profile");
 const downloadOpenDocumentsButton = document.getElementById("download-open-documents");
 const downloadSelectorDocumentsButton = document.getElementById("download-selector-documents");
 const previewSelectorImagesButton = document.getElementById("preview-selector-images");
@@ -16,6 +22,8 @@ const STORAGE_KEYS = {
   selector: "allTabsDocumentRunner.selector",
   downloadFolder: "allTabsDocumentRunner.downloadFolder",
   ensureJQuery: "allTabsDocumentRunner.ensureJQuery",
+  domainFilter: "allTabsDocumentRunner.domainFilter",
+  profiles: "allTabsDocumentRunner.profiles",
   previewImages: "allTabsDocumentRunner.previewImages"
 };
 
@@ -62,6 +70,31 @@ function isImageUrl(url) {
 
 function uniqueUrls(urls) {
   return [...new Set(urls.filter(isDownloadableUrl))];
+}
+
+function normalizeDomainFilter(domain) {
+  return domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^\.+|\.+$/g, "");
+}
+
+function tabMatchesDomain(tab, domain) {
+  if (!domain) {
+    return true;
+  }
+
+  try {
+    const { hostname } = new URL(tab.url || "");
+    const normalizedHostname = hostname.toLowerCase();
+    return normalizedHostname === domain || normalizedHostname.endsWith(`.${domain}`);
+  } catch (_error) {
+    return false;
+  }
+}
+
+async function queryScopedTabs() {
+  const domain = normalizeDomainFilter(domainFilterInput.value);
+  domainFilterInput.value = domain;
+  const tabs = await browser.tabs.query({});
+  return tabs.filter((tab) => tabMatchesDomain(tab, domain));
 }
 
 function sanitizeFolder(folder) {
@@ -151,6 +184,9 @@ function setBusy(isBusy) {
   runButton.disabled = isBusy;
   clearButton.disabled = isBusy;
   clearFolderButton.disabled = isBusy;
+  saveProfileButton.disabled = isBusy;
+  loadProfileButton.disabled = isBusy;
+  deleteProfileButton.disabled = isBusy;
   downloadOpenDocumentsButton.disabled = isBusy;
   downloadSelectorDocumentsButton.disabled = isBusy;
   previewSelectorImagesButton.disabled = isBusy;
@@ -162,7 +198,9 @@ async function restoreSavedValues() {
   codeInput.value = savedValues[STORAGE_KEYS.code] || "";
   selectorInput.value = savedValues[STORAGE_KEYS.selector] || "";
   downloadFolderInput.value = savedValues[STORAGE_KEYS.downloadFolder] || "";
+  domainFilterInput.value = savedValues[STORAGE_KEYS.domainFilter] || "";
   ensureJQueryInput.checked = savedValues[STORAGE_KEYS.ensureJQuery] !== false;
+  renderProfiles(savedValues[STORAGE_KEYS.profiles] || {});
 }
 
 async function saveCode() {
@@ -179,8 +217,103 @@ async function saveDownloadFolder() {
   await browser.storage.local.set({ [STORAGE_KEYS.downloadFolder]: sanitizedFolder });
 }
 
+async function saveDomainFilter() {
+  const domain = normalizeDomainFilter(domainFilterInput.value);
+  domainFilterInput.value = domain;
+  await browser.storage.local.set({ [STORAGE_KEYS.domainFilter]: domain });
+}
+
 async function saveEnsureJQuery() {
   await browser.storage.local.set({ [STORAGE_KEYS.ensureJQuery]: ensureJQueryInput.checked });
+}
+
+function currentProfileValues() {
+  return {
+    code: codeInput.value,
+    selector: selectorInput.value,
+    downloadFolder: getDownloadFolder(),
+    domainFilter: normalizeDomainFilter(domainFilterInput.value),
+    ensureJQuery: ensureJQueryInput.checked
+  };
+}
+
+function renderProfiles(profiles) {
+  profileSelect.textContent = "";
+  const names = Object.keys(profiles).sort((a, b) => a.localeCompare(b));
+
+  if (!names.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No saved profiles";
+    profileSelect.append(option);
+    return;
+  }
+
+  for (const name of names) {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    profileSelect.append(option);
+  }
+}
+
+async function getProfiles() {
+  const savedValues = await browser.storage.local.get(STORAGE_KEYS.profiles);
+  return savedValues[STORAGE_KEYS.profiles] || {};
+}
+
+async function saveProfile() {
+  const name = profileNameInput.value.trim() || profileSelect.value;
+
+  if (!name) {
+    setStatus("Enter a profile name before saving.");
+    return;
+  }
+
+  await Promise.all([saveCode(), saveSelector(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
+  const profiles = await getProfiles();
+  profiles[name] = currentProfileValues();
+  await browser.storage.local.set({ [STORAGE_KEYS.profiles]: profiles });
+  renderProfiles(profiles);
+  profileSelect.value = name;
+  profileNameInput.value = name;
+  setStatus(`Saved profile: ${name}`);
+}
+
+async function loadProfile() {
+  const name = profileSelect.value;
+  const profiles = await getProfiles();
+  const profile = profiles[name];
+
+  if (!profile) {
+    setStatus("Select a saved profile to load.");
+    return;
+  }
+
+  codeInput.value = profile.code || "";
+  selectorInput.value = profile.selector || "";
+  downloadFolderInput.value = profile.downloadFolder || "";
+  domainFilterInput.value = profile.domainFilter || "";
+  ensureJQueryInput.checked = profile.ensureJQuery !== false;
+  profileNameInput.value = name;
+  await Promise.all([saveCode(), saveSelector(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
+  setStatus(`Loaded profile: ${name}`);
+}
+
+async function deleteProfile() {
+  const name = profileSelect.value;
+  const profiles = await getProfiles();
+
+  if (!name || !profiles[name]) {
+    setStatus("Select a saved profile to delete.");
+    return;
+  }
+
+  delete profiles[name];
+  await browser.storage.local.set({ [STORAGE_KEYS.profiles]: profiles });
+  renderProfiles(profiles);
+  profileNameInput.value = "";
+  setStatus(`Deleted profile: ${name}`);
 }
 
 async function ensureJQuery(tabId) {
@@ -205,8 +338,8 @@ async function runInAllTabs() {
   setStatus("Finding tabs...");
 
   try {
-    await Promise.all([saveCode(), saveEnsureJQuery()]);
-    const tabs = await browser.tabs.query({});
+    await Promise.all([saveCode(), saveEnsureJQuery(), saveDomainFilter()]);
+    const tabs = await queryScopedTabs();
     let succeeded = 0;
     const failures = [];
 
@@ -227,7 +360,9 @@ async function runInAllTabs() {
       }
     }
 
-    const summary = `Finished. Ran in ${succeeded} of ${tabs.length} tabs.`;
+    const domain = normalizeDomainFilter(domainFilterInput.value);
+    const domainMessage = domain ? ` matching ${domain}` : "";
+    const summary = `Finished. Ran in ${succeeded} of ${tabs.length} tabs${domainMessage}.`;
     setStatus(failures.length ? `${summary}\n\nSkipped/failed:\n${failures.join("\n")}` : summary);
   } catch (error) {
     setStatus(`Failed: ${error.message}`);
@@ -258,7 +393,8 @@ async function saveOpenDocuments() {
 
   try {
     await saveDownloadFolder();
-    const tabs = await browser.tabs.query({});
+    await saveDomainFilter();
+    const tabs = await queryScopedTabs();
     const documentUrls = tabs.map((tab) => tab.url).filter(isDocumentUrl);
     const { downloaded, failures } = await downloadUrls(documentUrls);
     const folder = getDownloadFolder();
@@ -325,7 +461,8 @@ async function getSelectorUrls() {
   }
 
   await saveSelector();
-  const tabs = await browser.tabs.query({});
+  await saveDomainFilter();
+  const tabs = await queryScopedTabs();
   return collectUrlsFromSelector(tabs, selector);
 }
 
@@ -403,6 +540,9 @@ clearFolderButton.addEventListener("click", async () => {
   await saveDownloadFolder();
   setStatus("Cleared download subfolder.");
 });
+saveProfileButton.addEventListener("click", saveProfile);
+loadProfileButton.addEventListener("click", loadProfile);
+deleteProfileButton.addEventListener("click", deleteProfile);
 downloadOpenDocumentsButton.addEventListener("click", saveOpenDocuments);
 downloadSelectorDocumentsButton.addEventListener("click", saveSelectorDocuments);
 previewSelectorImagesButton.addEventListener("click", previewSelectorImages);
@@ -413,7 +553,11 @@ clearSelectorButton.addEventListener("click", async () => {
 });
 codeInput.addEventListener("input", saveCode);
 selectorInput.addEventListener("input", saveSelector);
+profileSelect.addEventListener("change", () => {
+  profileNameInput.value = profileSelect.value;
+});
 downloadFolderInput.addEventListener("change", saveDownloadFolder);
+domainFilterInput.addEventListener("change", saveDomainFilter);
 ensureJQueryInput.addEventListener("change", saveEnsureJQuery);
 
 restoreSavedValues().catch((error) => setStatus(`Failed to restore saved values: ${error.message}`));

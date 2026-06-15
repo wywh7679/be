@@ -6,7 +6,7 @@ A Firefox browser extension that opens as a full-page tool for running JavaScrip
 
 - `manifest.json` declares the Firefox WebExtension, toolbar button, background script, and permissions required to enumerate tabs, persist snippets/selectors/folders/previews, inject scripts, open extension tabs, and queue downloads.
 - `background.js` opens the full-page extension UI when the toolbar button is clicked.
-- `app.html`, `popup.css`, and `popup.js` provide the full-page UI for JavaScript execution, optional jQuery injection, download subfolder selection, document downloads, and image previews.
+- `app.html`, `popup.css`, and `popup.js` provide the full-page UI for profile management, JavaScript execution, optional jQuery injection, domain-limited tab targeting, download subfolder selection, document downloads, and image previews.
 - `popup.html` remains available as a compact standalone version of the same UI.
 - `vendor/jquery.min.js` is injected into compatible tabs before user code when the jQuery option is enabled and jQuery is not already loaded in the extension content-script context.
 - `preview.html`, `preview.css`, and `preview.js` render selected images as a four-column thumbnail gallery with multiselect controls, a clickable lightbox, slideshow controls, a preview-page subfolder field, and selected/all download buttons.
@@ -17,9 +17,17 @@ A Firefox browser extension that opens as a full-page tool for running JavaScrip
 2. Click **Load Temporary Add-on...**.
 3. Select this repository's `manifest.json`.
 4. Click the extension toolbar button to open the full-page extension UI.
-5. Optionally enter a relative download subfolder, such as `research/images`.
-6. Leave **Load jQuery in each tab before running code** checked if your snippet needs `$`/`jQuery`; the extension injects its bundled jQuery only when jQuery is not already available.
-7. Enter JavaScript and click **Run in all tabs**, click **Save open images/PDFs**, enter a CSS selector and click **Save selector matches**, or click **Preview selector images**.
+5. Optionally save or load a profile to populate the code, selector, folder, jQuery, and domain filter fields.
+6. Optionally enter a domain filter, such as `example.com`, to include only matching tabs and subdomains.
+7. Optionally enter a relative download subfolder, such as `research/images`.
+8. Leave **Load jQuery in each tab before running code** checked if your snippet needs `$`/`jQuery`; the extension injects its bundled jQuery only when jQuery is not already available.
+9. Enter JavaScript and click **Run in all tabs**, click **Save open images/PDFs**, enter a CSS selector and click **Save selector matches**, or click **Preview selector images**.
+
+## Profiles and domain filters
+
+Profiles save the current JavaScript snippet, selector, download subfolder, jQuery setting, and domain filter under a user-provided name. Use **Save profile** to add or update a profile, **Load profile** to populate all fields from the selected profile, and **Delete profile** to remove it.
+
+The optional domain filter limits tab operations to pages whose hostname exactly matches the entered domain or ends with it as a subdomain. For example, `example.com` includes `example.com` and `www.example.com`, but leaves other open tabs untouched. The filter applies to running JavaScript, saving open documents, selector downloads, and selector image previews.
 
 ## jQuery injection
 

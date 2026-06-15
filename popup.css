@@ -62,14 +62,20 @@ label {
 }
 
 input,
+select,
 textarea {
   box-sizing: border-box;
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
   width: 100%;
 }
 
-input {
+input,
+select {
   padding: 0.4rem;
+}
+
+select {
+  margin-bottom: 0.35rem;
 }
 
 textarea {

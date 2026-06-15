@@ -13,6 +13,20 @@
         JavaScript runs in every compatible tab and downloads can save files from matching page URLs. Only run code and save documents you trust.
       </p>
 
+      <section aria-labelledby="profiles-heading">
+        <h2 id="profiles-heading">Profiles</h2>
+        <p class="hint">Save, load, or remove field presets for code, selectors, download folders, jQuery, and domain filters.</p>
+        <label for="profile-name">Profile name</label>
+        <input id="profile-name" type="text" placeholder="Example: PDF scraper">
+        <label for="profile-select">Saved profiles</label>
+        <select id="profile-select"></select>
+        <div class="actions wrap">
+          <button id="save-profile" type="button">Save profile</button>
+          <button id="load-profile" type="button">Load profile</button>
+          <button id="delete-profile" type="button" class="secondary">Delete profile</button>
+        </div>
+      </section>
+
       <section aria-labelledby="script-heading">
         <h2 id="script-heading">Run JavaScript</h2>
         <label for="code">JavaScript to execute</label>
@@ -30,6 +44,10 @@
       <section aria-labelledby="download-heading">
         <h2 id="download-heading">Save documents</h2>
         <p class="hint">Download open image/PDF tabs, collect documents with a CSS selector, or preview selected images in a gallery tab.</p>
+
+        <label for="domain-filter">Only include tabs from domain</label>
+        <input id="domain-filter" type="text" placeholder="example.com (optional)">
+        <p class="field-help">Leave blank to include all compatible tabs. Entering example.com also includes subdomains like www.example.com.</p>
 
         <label for="download-folder">Download subfolder</label>
         <input id="download-folder" type="text" placeholder="optional/subfolder">
