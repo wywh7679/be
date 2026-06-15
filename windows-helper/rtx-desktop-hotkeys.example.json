@@ -1,0 +1,14 @@
+{
+  "desktops": [
+    {
+      "id": "rtx-desktop-1",
+      "name": "RTX Desktop 1",
+      "hotkey": "Ctrl+Alt+Shift+1"
+    },
+    {
+      "id": "rtx-desktop-2",
+      "name": "RTX Desktop 2",
+      "hotkey": "Ctrl+Alt+Shift+2"
+    }
+  ]
+}
