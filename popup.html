@@ -16,6 +16,10 @@
       <section aria-labelledby="script-heading">
         <h2 id="script-heading">Run JavaScript</h2>
         <label for="code">JavaScript to execute</label>
+        <label class="inline-option">
+          <input id="ensure-jquery" type="checkbox" checked>
+          Load jQuery in each tab before running code if it is not already loaded
+        </label>
         <textarea id="code" spellcheck="false" placeholder="document.body.style.outline = '4px solid orange';"></textarea>
         <div class="actions">
           <button id="run" type="button">Run in all tabs</button>

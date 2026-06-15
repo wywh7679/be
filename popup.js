@@ -1,5 +1,6 @@
 const codeInput = document.getElementById("code");
 const selectorInput = document.getElementById("selector");
+const ensureJQueryInput = document.getElementById("ensure-jquery");
 const downloadFolderInput = document.getElementById("download-folder");
 const runButton = document.getElementById("run");
 const clearButton = document.getElementById("clear");
@@ -14,6 +15,7 @@ const STORAGE_KEYS = {
   code: "allTabsDocumentRunner.code",
   selector: "allTabsDocumentRunner.selector",
   downloadFolder: "allTabsDocumentRunner.downloadFolder",
+  ensureJQuery: "allTabsDocumentRunner.ensureJQuery",
   previewImages: "allTabsDocumentRunner.previewImages"
 };
 
@@ -160,6 +162,7 @@ async function restoreSavedValues() {
   codeInput.value = savedValues[STORAGE_KEYS.code] || "";
   selectorInput.value = savedValues[STORAGE_KEYS.selector] || "";
   downloadFolderInput.value = savedValues[STORAGE_KEYS.downloadFolder] || "";
+  ensureJQueryInput.checked = savedValues[STORAGE_KEYS.ensureJQuery] !== false;
 }
 
 async function saveCode() {
@@ -176,6 +179,20 @@ async function saveDownloadFolder() {
   await browser.storage.local.set({ [STORAGE_KEYS.downloadFolder]: sanitizedFolder });
 }
 
+async function saveEnsureJQuery() {
+  await browser.storage.local.set({ [STORAGE_KEYS.ensureJQuery]: ensureJQueryInput.checked });
+}
+
+async function ensureJQuery(tabId) {
+  const [hasJQuery] = await browser.tabs.executeScript(tabId, {
+    code: "typeof window.jQuery === \"function\" && typeof window.$ === \"function\""
+  });
+
+  if (!hasJQuery) {
+    await browser.tabs.executeScript(tabId, { file: "vendor/jquery.min.js" });
+  }
+}
+
 async function runInAllTabs() {
   const code = codeInput.value.trim();
 
@@ -188,7 +205,7 @@ async function runInAllTabs() {
   setStatus("Finding tabs...");
 
   try {
-    await saveCode();
+    await Promise.all([saveCode(), saveEnsureJQuery()]);
     const tabs = await browser.tabs.query({});
     let succeeded = 0;
     const failures = [];
@@ -199,6 +216,10 @@ async function runInAllTabs() {
       }
 
       try {
+        if (ensureJQueryInput.checked) {
+          await ensureJQuery(tab.id);
+        }
+
         await browser.tabs.executeScript(tab.id, { code });
         succeeded += 1;
       } catch (error) {
@@ -393,5 +414,6 @@ clearSelectorButton.addEventListener("click", async () => {
 codeInput.addEventListener("input", saveCode);
 selectorInput.addEventListener("input", saveSelector);
 downloadFolderInput.addEventListener("change", saveDownloadFolder);
+ensureJQueryInput.addEventListener("change", saveEnsureJQuery);
 
 restoreSavedValues().catch((error) => setStatus(`Failed to restore saved values: ${error.message}`));
