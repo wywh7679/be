@@ -320,7 +320,7 @@ async function moveFirefoxWindowsToDesktop(desktopId, desktopName) {
   try {
     const result = await fetchDesktopHelper("/move-firefox-windows", {
       method: "POST",
-      body: JSON.stringify({ desktopId })
+      body: JSON.stringify({ desktopId, skipTitle: document.title })
     });
     setStatus(`Moved ${result.moved} Firefox window${result.moved === 1 ? "" : "s"} to ${desktopName}.`);
   } catch (error) {

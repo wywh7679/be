@@ -60,7 +60,7 @@ static async Task HandleRequest(HttpListenerContext context)
         {
             using var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding);
             var request = JsonSerializer.Deserialize<MoveRequest>(await reader.ReadToEndAsync(), JsonOptions()) ?? new MoveRequest();
-            var result = RtxDesktopMover.MoveFirefoxWindowsToDesktop(request.DesktopId ?? string.Empty);
+            var result = RtxDesktopMover.MoveFirefoxWindowsToDesktop(request.DesktopId ?? string.Empty, request.SkipTitle ?? string.Empty);
             await WriteJson(context.Response, new { ok = true, moved = result.Moved, attempted = result.Attempted, result.DesktopName });
             return;
         }
@@ -98,6 +98,7 @@ static JsonSerializerOptions JsonOptions() => new(JsonSerializerDefaults.Web)
 sealed class MoveRequest
 {
     public string? DesktopId { get; set; }
+    public string? SkipTitle { get; set; }
 }
 
 sealed class RtxDesktopConfig
@@ -134,7 +135,7 @@ static partial class RtxDesktopMover
 {
     private const int SwRestore = 9;
 
-    public static MoveResult MoveFirefoxWindowsToDesktop(string desktopId)
+    public static MoveResult MoveFirefoxWindowsToDesktop(string desktopId, string skipTitle)
     {
         var config = RtxDesktopConfig.Load();
         var desktop = config.Desktops.FirstOrDefault(candidate => string.Equals(candidate.Id, desktopId, StringComparison.OrdinalIgnoreCase))
@@ -143,16 +144,16 @@ static partial class RtxDesktopMover
         var attempted = 0;
         var moved = 0;
 
-        foreach (var process in Process.GetProcessesByName("firefox"))
+        foreach (var window in FirefoxWindowEnumerator.GetFirefoxWindows())
         {
-            if (process.MainWindowHandle == IntPtr.Zero)
+            if (!string.IsNullOrWhiteSpace(skipTitle) && window.Title.Contains(skipTitle, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
             attempted += 1;
-            NativeMethods.ShowWindow(process.MainWindowHandle, SwRestore);
-            NativeMethods.SetForegroundWindow(process.MainWindowHandle);
+            NativeMethods.ShowWindow(window.Handle, SwRestore);
+            NativeMethods.SetForegroundWindow(window.Handle);
             Thread.Sleep(150);
             hotkey.Send();
             moved += 1;
@@ -160,6 +161,50 @@ static partial class RtxDesktopMover
         }
 
         return new MoveResult(attempted, moved, desktop.NameOrId());
+    }
+}
+
+sealed record FirefoxWindow(IntPtr Handle, string Title);
+
+static class FirefoxWindowEnumerator
+{
+    public static IReadOnlyList<FirefoxWindow> GetFirefoxWindows()
+    {
+        var windows = new List<FirefoxWindow>();
+
+        NativeMethods.EnumWindows((windowHandle, _) =>
+        {
+            NativeMethods.GetWindowThreadProcessId(windowHandle, out var processId);
+
+            try
+            {
+                using var process = Process.GetProcessById((int)processId);
+
+                if (!string.Equals(process.ProcessName, "firefox", StringComparison.OrdinalIgnoreCase) || !NativeMethods.IsWindowVisible(windowHandle))
+                {
+                    return true;
+                }
+
+                var titleLength = NativeMethods.GetWindowTextLength(windowHandle);
+
+                if (titleLength <= 0)
+                {
+                    return true;
+                }
+
+                var titleBuilder = new StringBuilder(titleLength + 1);
+                NativeMethods.GetWindowText(windowHandle, titleBuilder, titleBuilder.Capacity);
+                windows.Add(new FirefoxWindow(windowHandle, titleBuilder.ToString()));
+            }
+            catch
+            {
+                // The process may exit while windows are being enumerated. Ignore and keep enumerating.
+            }
+
+            return true;
+        }, IntPtr.Zero);
+
+        return windows;
     }
 }
 
@@ -304,8 +349,27 @@ struct KeyboardInput
     public IntPtr ExtraInfo;
 }
 
+delegate bool EnumWindowsProc(IntPtr windowHandle, IntPtr lParam);
+
 static class NativeMethods
 {
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr windowHandle, out uint processId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern int GetWindowText(IntPtr windowHandle, StringBuilder text, int maxCount);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern int GetWindowTextLength(IntPtr windowHandle);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsWindowVisible(IntPtr windowHandle);
+
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetForegroundWindow(IntPtr windowHandle);
