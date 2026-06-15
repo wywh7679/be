@@ -322,7 +322,7 @@ async function moveFirefoxWindowsToDesktop(desktopId, desktopName) {
       method: "POST",
       body: JSON.stringify({ desktopId, skipTitle: document.title })
     });
-    setStatus(`Moved ${result.moved} Firefox window${result.moved === 1 ? "" : "s"} to ${desktopName}.`);
+    setStatus(`Moved ${result.moved} Firefox window${result.moved === 1 ? "" : "s"} to ${desktopName}. Skipped ${result.skipped || 0}.`);
   } catch (error) {
     setStatus(`Failed to move Firefox windows: ${error.message}`);
   }

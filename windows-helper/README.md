@@ -23,10 +23,10 @@ The executable is written to `bin\Release\net8.0-windows\win-x64\publish\AllTabs
 
 ## Troubleshooting
 
-If the helper reports `SendInput sent 0 ...`, rebuild from the current source. The helper now enumerates all visible top-level Firefox windows instead of using only the helper process main window, and skips the initiating extension window by title when the extension sends `skipTitle`. The helper also uses the Win32 `INPUT` layout required by `SendInput` on 64-bit Windows. The `/status` endpoint should report `inputSize: 40` for the win-x64 helper target. If `SendInput` fails again, the error includes `GetLastWin32Error` plus the input structure size.
+If the helper reports `SendInput sent 0 ...`, rebuild from the current source. The helper enumerates all visible top-level Firefox windows instead of using only the helper process main window, skips the initiating extension window by title when the extension sends `skipTitle`, and verifies a Firefox window became the foreground window before sending the RTX move hotkey so it does not accidentally move another application. The helper also uses the Win32 `INPUT` layout required by `SendInput` on 64-bit Windows. The `/status` endpoint should report `inputSize: 40` for the win-x64 helper target. If `SendInput` fails again, the error includes `GetLastWin32Error` plus the input structure size.
 
 ## Endpoints
 
 - `GET /status` returns helper availability and configured desktop count.
 - `GET /desktops` returns configured RTX desktop hotkey targets.
-- `POST /move-firefox-windows` with `{ "desktopId": "...", "skipTitle": "All Tabs Document Runner" }` enumerates visible top-level Firefox windows, skips the window whose title contains `skipTitle`, focuses each remaining window, and sends the configured NVIDIA RTX Desktop Manager move-window hotkey for that desktop.
+- `POST /move-firefox-windows` with `{ "desktopId": "...", "skipTitle": "All Tabs Document Runner" }` enumerates visible top-level Firefox windows, skips the window whose title contains `skipTitle`, focuses and verifies each remaining Firefox window, and sends the configured NVIDIA RTX Desktop Manager move-window hotkey only after that Firefox window is foreground.

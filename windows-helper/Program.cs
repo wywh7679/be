@@ -61,7 +61,7 @@ static async Task HandleRequest(HttpListenerContext context)
             using var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding);
             var request = JsonSerializer.Deserialize<MoveRequest>(await reader.ReadToEndAsync(), JsonOptions()) ?? new MoveRequest();
             var result = RtxDesktopMover.MoveFirefoxWindowsToDesktop(request.DesktopId ?? string.Empty, request.SkipTitle ?? string.Empty);
-            await WriteJson(context.Response, new { ok = true, moved = result.Moved, attempted = result.Attempted, result.DesktopName });
+            await WriteJson(context.Response, new { ok = true, moved = result.Moved, attempted = result.Attempted, skipped = result.Skipped, result.DesktopName });
             return;
         }
 
@@ -129,7 +129,7 @@ sealed class RtxDesktop
     public string Hotkey { get; set; } = string.Empty;
 }
 
-sealed record MoveResult(int Attempted, int Moved, string DesktopName);
+sealed record MoveResult(int Attempted, int Moved, int Skipped, string DesktopName);
 
 static partial class RtxDesktopMover
 {
@@ -143,6 +143,7 @@ static partial class RtxDesktopMover
         var hotkey = Hotkey.Parse(desktop.Hotkey);
         var attempted = 0;
         var moved = 0;
+        var skipped = 0;
 
         foreach (var window in FirefoxWindowEnumerator.GetFirefoxWindows())
         {
@@ -152,15 +153,39 @@ static partial class RtxDesktopMover
             }
 
             attempted += 1;
-            NativeMethods.ShowWindow(window.Handle, SwRestore);
-            NativeMethods.SetForegroundWindow(window.Handle);
-            Thread.Sleep(150);
+
+            if (!TryFocusWindow(window.Handle))
+            {
+                skipped += 1;
+                continue;
+            }
+
             hotkey.Send();
             moved += 1;
             Thread.Sleep(150);
         }
 
-        return new MoveResult(attempted, moved, desktop.NameOrId());
+        return new MoveResult(attempted, moved, skipped, desktop.NameOrId());
+    }
+
+    private static bool TryFocusWindow(IntPtr windowHandle)
+    {
+        NativeMethods.ShowWindow(windowHandle, SwRestore);
+        Hotkey.PulseAlt();
+        NativeMethods.SetForegroundWindow(windowHandle);
+        NativeMethods.BringWindowToTop(windowHandle);
+
+        for (var attempt = 0; attempt < 10; attempt += 1)
+        {
+            if (NativeMethods.GetForegroundWindow() == windowHandle)
+            {
+                return true;
+            }
+
+            Thread.Sleep(100);
+        }
+
+        return false;
     }
 }
 
@@ -307,6 +332,12 @@ sealed class Hotkey
         };
     }
 
+    public static void PulseAlt()
+    {
+        var inputs = new[] { KeyDown(0x12), KeyUp(0x12) };
+        NativeMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
+    }
+
     private static Input KeyDown(ushort key) => new()
     {
         Type = 1,
@@ -371,8 +402,15 @@ static class NativeMethods
     public static extern bool IsWindowVisible(IntPtr windowHandle);
 
     [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetForegroundWindow(IntPtr windowHandle);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool BringWindowToTop(IntPtr windowHandle);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
