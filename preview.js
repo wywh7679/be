@@ -18,7 +18,9 @@ const closeLightboxButton = document.getElementById("close-lightbox");
 const previousImageButton = document.getElementById("previous-image");
 const nextImageButton = document.getElementById("next-image");
 
+let imageItems = [];
 let images = [];
+let metadata = [];
 let displayUrls = [];
 let selectedIndexes = new Set();
 let currentIndex = 0;
@@ -104,6 +106,36 @@ function filenameForDownload(url, index) {
   return downloadFolder ? `${downloadFolder}/${filename}` : filename;
 }
 
+function textFilenameForDownload(url, index) {
+  const filename = filenameFromUrl(url, index);
+  const dotIndex = filename.lastIndexOf(".");
+  const baseName = dotIndex > 0 ? filename.slice(0, dotIndex) : filename;
+  const textFilename = `${baseName}.txt`;
+  const downloadFolder = getDownloadFolder();
+  return downloadFolder ? `${downloadFolder}/${textFilename}` : textFilename;
+}
+
+async function downloadMetadataFile(url, index) {
+  const text = String(metadata[index] || "").replace(/\r?\n/g, "\n").trim();
+
+  if (!text) {
+    return null;
+  }
+
+  const blobUrl = URL.createObjectURL(new Blob([`${text}\n`], { type: "text/plain;charset=utf-8" }));
+
+  try {
+    return await browser.downloads.download({
+      conflictAction: "uniquify",
+      filename: textFilenameForDownload(url, index),
+      saveAs: false,
+      url: blobUrl
+    });
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+  }
+}
+
 function setSummary(message) {
   summary.textContent = message;
 }
@@ -137,7 +169,8 @@ function setImageSelected(index, isSelected) {
 }
 
 function labelForImage(url, index) {
-  return isDataImageUrl(url) ? `${index + 1} of ${images.length}: inline data image` : `${index + 1} of ${images.length}: ${url}`;
+  const metadataText = metadata[index] ? ` — ${metadata[index]}` : "";
+  return isDataImageUrl(url) ? `${index + 1} of ${images.length}: inline data image${metadataText}` : `${index + 1} of ${images.length}: ${url}${metadataText}`;
 }
 
 function showImage(index) {
@@ -194,6 +227,7 @@ async function downloadImages(indexes) {
         saveAs: false,
         url: displayUrls[index] || url
       });
+      await downloadMetadataFile(url, index);
       downloaded += 1;
     } catch (error) {
       failures.push(`${url}: ${error.message}`);
@@ -268,7 +302,9 @@ function selectNoImages() {
 async function loadPreview() {
   const saved = await browser.storage.local.get(Object.values(STORAGE_KEYS));
   const preview = saved[STORAGE_KEYS.previewImages] || {};
-  images = Array.isArray(preview.images) ? preview.images : [];
+  imageItems = Array.isArray(preview.images) ? preview.images : [];
+  images = imageItems.map((item) => (typeof item === "string" ? item : item?.url)).filter(Boolean);
+  metadata = imageItems.map((item) => (typeof item === "string" ? "" : item?.metadata || ""));
   displayUrls = images.map((url) => (isDataImageUrl(url) ? dataImageToBlobUrl(url) : url));
   folderInput.value = preview.downloadFolder || saved[STORAGE_KEYS.downloadFolder] || "";
   selectedIndexes = new Set(images.map((_url, index) => index));

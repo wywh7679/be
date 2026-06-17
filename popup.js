@@ -1,5 +1,7 @@
 const codeInput = document.getElementById("code");
 const selectorInput = document.getElementById("selector");
+const metadataSelectorInput = document.getElementById("metadata-selector");
+const customCssInput = document.getElementById("custom-css");
 const ensureJQueryInput = document.getElementById("ensure-jquery");
 const domainFilterInput = document.getElementById("domain-filter");
 const profileNameInput = document.getElementById("profile-name");
@@ -9,6 +11,8 @@ const tabSetSelect = document.getElementById("tabset-select");
 const downloadFolderInput = document.getElementById("download-folder");
 const runButton = document.getElementById("run");
 const clearButton = document.getElementById("clear");
+const injectCssButton = document.getElementById("inject-css");
+const clearCssButton = document.getElementById("clear-css");
 const clearFolderButton = document.getElementById("clear-folder");
 const saveProfileButton = document.getElementById("save-profile");
 const loadProfileButton = document.getElementById("load-profile");
@@ -25,6 +29,7 @@ const tabButtons = [...document.querySelectorAll(".tab")];
 const tabPanels = [...document.querySelectorAll(".tab-panel")];
 const minimizeWindowsButton = document.getElementById("minimize-windows");
 const restoreMinimizedWindowsButton = document.getElementById("restore-minimized-windows");
+const closeOtherWindowsTabsButton = document.getElementById("close-other-windows-tabs");
 const refreshDesktopHelperButton = document.getElementById("refresh-desktop-helper");
 const desktopHelperStatus = document.getElementById("desktop-helper-status");
 const desktopButtons = document.getElementById("desktop-buttons");
@@ -32,6 +37,8 @@ const desktopButtons = document.getElementById("desktop-buttons");
 const STORAGE_KEYS = {
   code: "allTabsDocumentRunner.code",
   selector: "allTabsDocumentRunner.selector",
+  metadataSelector: "allTabsDocumentRunner.metadataSelector",
+  customCss: "allTabsDocumentRunner.customCss",
   downloadFolder: "allTabsDocumentRunner.downloadFolder",
   ensureJQuery: "allTabsDocumentRunner.ensureJQuery",
   domainFilter: "allTabsDocumentRunner.domainFilter",
@@ -172,22 +179,58 @@ function filenameForDownload(url, index, folder = getDownloadFolder()) {
   return folder ? `${folder}/${filename}` : filename;
 }
 
-async function downloadUrl(url, index, folder = getDownloadFolder()) {
-  const downloadSource = isDataImageUrl(url) ? dataImageToBlobUrl(url) : url;
+function textFilenameForDownload(url, index, folder = getDownloadFolder()) {
+  const filename = filenameFromUrl(url, index);
+  const dotIndex = filename.lastIndexOf(".");
+  const baseName = dotIndex > 0 ? filename.slice(0, dotIndex) : filename;
+  const textFilename = `${baseName}.txt`;
+  return folder ? `${folder}/${textFilename}` : textFilename;
+}
+
+function metadataToText(metadata) {
+  return String(metadata || "").replace(/\r?\n/g, "\n").trim();
+}
+
+async function downloadMetadataFile(url, index, metadata, folder = getDownloadFolder()) {
+  const text = metadataToText(metadata);
+
+  if (!text) {
+    return null;
+  }
+
+  const blobUrl = URL.createObjectURL(new Blob([`${text}\n`], { type: "text/plain;charset=utf-8" }));
 
   try {
     return await browser.downloads.download({
+      conflictAction: "uniquify",
+      filename: textFilenameForDownload(url, index, folder),
+      saveAs: false,
+      url: blobUrl
+    });
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+  }
+}
+
+async function downloadUrl(url, index, folder = getDownloadFolder(), metadata = "") {
+  const downloadSource = isDataImageUrl(url) ? dataImageToBlobUrl(url) : url;
+
+  try {
+    const downloadId = await browser.downloads.download({
       conflictAction: "uniquify",
       filename: filenameForDownload(url, index, folder),
       saveAs: false,
       url: downloadSource
     });
+    await downloadMetadataFile(url, index, metadata, folder);
+    return downloadId;
   } finally {
     if (downloadSource !== url) {
       window.setTimeout(() => URL.revokeObjectURL(downloadSource), 30000);
     }
   }
 }
+
 
 function getDownloadFolder() {
   return sanitizeFolder(downloadFolderInput.value);
@@ -196,6 +239,8 @@ function getDownloadFolder() {
 function setBusy(isBusy) {
   runButton.disabled = isBusy;
   clearButton.disabled = isBusy;
+  injectCssButton.disabled = isBusy;
+  clearCssButton.disabled = isBusy;
   clearFolderButton.disabled = isBusy;
   saveProfileButton.disabled = isBusy;
   loadProfileButton.disabled = isBusy;
@@ -205,6 +250,7 @@ function setBusy(isBusy) {
   deleteTabSetButton.disabled = isBusy;
   minimizeWindowsButton.disabled = isBusy;
   restoreMinimizedWindowsButton.disabled = isBusy;
+  closeOtherWindowsTabsButton.disabled = isBusy;
   refreshDesktopHelperButton.disabled = isBusy;
   downloadOpenDocumentsButton.disabled = isBusy;
   downloadSelectorDocumentsButton.disabled = isBusy;
@@ -263,6 +309,39 @@ async function restoreMinimizedWindows() {
   }
 }
 
+
+async function closeOtherWindowsAndTabs() {
+  if (!confirm("Close every other normal Firefox window and every other tab in this window?")) {
+    return;
+  }
+
+  setBusy(true);
+
+  try {
+    const currentWindow = await browser.windows.getCurrent({ populate: true });
+    const currentTabs = currentWindow.tabs || [];
+    const activeTab = currentTabs.find((tab) => tab.active) || currentTabs[0];
+    const tabsToClose = currentTabs
+      .filter((tab) => tab.id !== activeTab?.id && typeof tab.id === "number")
+      .map((tab) => tab.id);
+    const windows = await browser.windows.getAll({ windowTypes: ["normal"] });
+    const windowsToClose = windows.filter((windowInfo) => windowInfo.id !== currentWindow.id && typeof windowInfo.id === "number");
+
+    for (const tabId of tabsToClose) {
+      await browser.tabs.remove(tabId);
+    }
+
+    for (const windowInfo of windowsToClose) {
+      await browser.windows.remove(windowInfo.id);
+    }
+
+    setStatus(`Closed ${windowsToClose.length} other browser window${windowsToClose.length === 1 ? "" : "s"} and ${tabsToClose.length} other tab${tabsToClose.length === 1 ? "" : "s"} in this window.`);
+  } catch (error) {
+    setStatus(`Failed to close other windows/tabs: ${error.message}`);
+  } finally {
+    setBusy(false);
+  }
+}
 
 async function fetchDesktopHelper(path, options = {}) {
   const response = await fetch(`http://127.0.0.1:7678${path}`, {
@@ -332,6 +411,8 @@ async function restoreSavedValues() {
   const savedValues = await browser.storage.local.get(Object.values(STORAGE_KEYS));
   codeInput.value = savedValues[STORAGE_KEYS.code] || "";
   selectorInput.value = savedValues[STORAGE_KEYS.selector] || "";
+  metadataSelectorInput.value = savedValues[STORAGE_KEYS.metadataSelector] || "";
+  customCssInput.value = savedValues[STORAGE_KEYS.customCss] || "";
   downloadFolderInput.value = savedValues[STORAGE_KEYS.downloadFolder] || "";
   domainFilterInput.value = savedValues[STORAGE_KEYS.domainFilter] || "";
   ensureJQueryInput.checked = savedValues[STORAGE_KEYS.ensureJQuery] !== false;
@@ -345,6 +426,14 @@ async function saveCode() {
 
 async function saveSelector() {
   await browser.storage.local.set({ [STORAGE_KEYS.selector]: selectorInput.value });
+}
+
+async function saveMetadataSelector() {
+  await browser.storage.local.set({ [STORAGE_KEYS.metadataSelector]: metadataSelectorInput.value.trim() });
+}
+
+async function saveCustomCss() {
+  await browser.storage.local.set({ [STORAGE_KEYS.customCss]: customCssInput.value });
 }
 
 async function saveDownloadFolder() {
@@ -367,6 +456,8 @@ function currentProfileValues() {
   return {
     code: codeInput.value,
     selector: selectorInput.value,
+    metadataSelector: metadataSelectorInput.value.trim(),
+    customCss: customCssInput.value,
     downloadFolder: getDownloadFolder(),
     domainFilter: normalizeDomainFilter(domainFilterInput.value),
     ensureJQuery: ensureJQueryInput.checked
@@ -406,7 +497,7 @@ async function saveProfile() {
     return;
   }
 
-  await Promise.all([saveCode(), saveSelector(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
+  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
   const profiles = await getProfiles();
   profiles[name] = currentProfileValues();
   await browser.storage.local.set({ [STORAGE_KEYS.profiles]: profiles });
@@ -428,11 +519,13 @@ async function loadProfile() {
 
   codeInput.value = profile.code || "";
   selectorInput.value = profile.selector || "";
+  metadataSelectorInput.value = profile.metadataSelector || "";
+  customCssInput.value = profile.customCss || "";
   downloadFolderInput.value = profile.downloadFolder || "";
   domainFilterInput.value = profile.domainFilter || "";
   ensureJQueryInput.checked = profile.ensureJQuery !== false;
   profileNameInput.value = name;
-  await Promise.all([saveCode(), saveSelector(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
+  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
   setStatus(`Loaded profile: ${name}`);
 }
 
@@ -573,6 +666,58 @@ async function ensureJQuery(tabId) {
   }
 }
 
+function buildCssInjector(css) {
+  return `(() => {
+    const css = ${JSON.stringify(css)};
+    const style = document.createElement("style");
+    style.dataset.allTabsDocumentRunner = "custom-css";
+    style.textContent = css;
+    (document.head || document.documentElement || document.body).appendChild(style);
+  })();`;
+}
+
+async function injectCssInAllTabs() {
+  const css = customCssInput.value.trim();
+
+  if (!css) {
+    setStatus("Enter CSS before injecting.");
+    return;
+  }
+
+  setBusy(true);
+  setStatus("Injecting CSS into tabs...");
+
+  try {
+    await Promise.all([saveCustomCss(), saveDomainFilter()]);
+    const tabs = await queryScopedTabs();
+    const code = buildCssInjector(css);
+    let succeeded = 0;
+    const failures = [];
+
+    for (const tab of tabs) {
+      if (typeof tab.id !== "number") {
+        continue;
+      }
+
+      try {
+        await browser.tabs.executeScript(tab.id, { code });
+        succeeded += 1;
+      } catch (error) {
+        failures.push(`${describeTab(tab)}: ${error.message}`);
+      }
+    }
+
+    const domain = normalizeDomainFilter(domainFilterInput.value);
+    const domainMessage = domain ? ` matching ${domain}` : "";
+    const summary = `Injected CSS into ${succeeded} of ${tabs.length} tabs${domainMessage}.`;
+    setStatus(failures.length ? `${summary}\n\nSkipped/failed:\n${failures.join("\n")}` : summary);
+  } catch (error) {
+    setStatus(`Failed to inject CSS: ${error.message}`);
+  } finally {
+    setBusy(false);
+  }
+}
+
 async function runInAllTabs() {
   const code = codeInput.value.trim();
 
@@ -618,16 +763,34 @@ async function runInAllTabs() {
   }
 }
 
-async function downloadUrls(urls, folder = getDownloadFolder()) {
+function normalizeDownloadItems(items) {
+  const seen = new Set();
+  const normalizedItems = [];
+
+  for (const item of items) {
+    const url = typeof item === "string" ? item : item?.url;
+
+    if (!isDownloadableUrl(url) || seen.has(url)) {
+      continue;
+    }
+
+    seen.add(url);
+    normalizedItems.push({ url, metadata: typeof item === "string" ? "" : item.metadata || "" });
+  }
+
+  return normalizedItems;
+}
+
+async function downloadUrls(items, folder = getDownloadFolder()) {
   let downloaded = 0;
   const failures = [];
 
-  for (const [index, url] of uniqueUrls(urls).entries()) {
+  for (const [index, item] of normalizeDownloadItems(items).entries()) {
     try {
-      await downloadUrl(url, index, folder);
+      await downloadUrl(item.url, index, folder, item.metadata);
       downloaded += 1;
     } catch (error) {
-      failures.push(`${url}: ${error.message}`);
+      failures.push(`${item.url}: ${error.message}`);
     }
   }
 
@@ -655,33 +818,61 @@ async function saveOpenDocuments() {
   }
 }
 
-function buildSelectorCollector(selector) {
+function buildSelectorCollector(selector, metadataSelector) {
   return `(() => {
     const selector = ${JSON.stringify(selector)};
+    const metadataSelector = ${JSON.stringify(metadataSelector)};
     const attributes = ["href", "src", "currentSrc", "data", "poster"];
-    const urls = [];
+    const items = [];
+
+    function textFromMetadataElement(element) {
+      if (!element || !metadataSelector) {
+        return "";
+      }
+
+      const localMatch = element.matches?.(metadataSelector) ? element : element.querySelector?.(metadataSelector);
+      const closestMatch = element.closest?.(metadataSelector);
+      const documentMatch = document.querySelector(metadataSelector);
+      const metadataElement = localMatch || closestMatch || documentMatch;
+      return (metadataElement?.innerText || metadataElement?.textContent || "").trim();
+    }
+
+    function addUrl(value, element) {
+      if (!value) {
+        return;
+      }
+
+      items.push({
+        url: new URL(value, document.baseURI).href,
+        metadata: textFromMetadataElement(element)
+      });
+    }
 
     for (const element of document.querySelectorAll(selector)) {
       if (element.currentSrc) {
-        urls.push(element.currentSrc);
+        addUrl(element.currentSrc, element);
       }
 
       for (const attribute of attributes) {
-        const value = element.getAttribute(attribute);
-        if (value) {
-          urls.push(new URL(value, document.baseURI).href);
-        }
+        addUrl(element.getAttribute(attribute), element);
       }
     }
 
-    return [...new Set(urls)];
+    const seen = new Set();
+    return items.filter((item) => {
+      if (seen.has(item.url)) {
+        return false;
+      }
+      seen.add(item.url);
+      return true;
+    });
   })();`;
 }
 
-async function collectUrlsFromSelector(tabs, selector) {
-  const urls = [];
+async function collectUrlsFromSelector(tabs, selector, metadataSelector) {
+  const items = [];
   const failures = [];
-  const code = buildSelectorCollector(selector);
+  const code = buildSelectorCollector(selector, metadataSelector);
 
   for (const tab of tabs) {
     if (typeof tab.id !== "number") {
@@ -689,14 +880,14 @@ async function collectUrlsFromSelector(tabs, selector) {
     }
 
     try {
-      const [tabUrls = []] = await browser.tabs.executeScript(tab.id, { code });
-      urls.push(...tabUrls);
+      const [tabItems = []] = await browser.tabs.executeScript(tab.id, { code });
+      items.push(...tabItems);
     } catch (error) {
       failures.push(`${describeTab(tab)}: ${error.message}`);
     }
   }
 
-  return { urls, failures };
+  return { items, failures };
 }
 
 async function getSelectorUrls() {
@@ -708,9 +899,10 @@ async function getSelectorUrls() {
   }
 
   await saveSelector();
+  await saveMetadataSelector();
   await saveDomainFilter();
   const tabs = await queryScopedTabs();
-  return collectUrlsFromSelector(tabs, selector);
+  return collectUrlsFromSelector(tabs, selector, metadataSelectorInput.value.trim());
 }
 
 async function saveSelectorDocuments() {
@@ -725,8 +917,8 @@ async function saveSelectorDocuments() {
       return;
     }
 
-    const { urls, failures: collectionFailures } = result;
-    const { downloaded, failures: downloadFailures } = await downloadUrls(urls);
+    const { items, failures: collectionFailures } = result;
+    const { downloaded, failures: downloadFailures } = await downloadUrls(items);
     const failures = [...collectionFailures, ...downloadFailures];
     const folder = getDownloadFolder();
     const folderMessage = folder ? ` to ${folder}/` : "";
@@ -751,9 +943,9 @@ async function previewSelectorImages() {
       return;
     }
 
-    const imageUrls = uniqueUrls(result.urls).filter((url) => isImageUrl(url) || !isDocumentUrl(url));
+    const imageItems = normalizeDownloadItems(result.items).filter((item) => isImageUrl(item.url) || !isDocumentUrl(item.url));
 
-    if (!imageUrls.length) {
+    if (!imageItems.length) {
       setStatus("No image URLs were found for that selector.");
       return;
     }
@@ -762,12 +954,12 @@ async function previewSelectorImages() {
       [STORAGE_KEYS.previewImages]: {
         createdAt: Date.now(),
         downloadFolder: getDownloadFolder(),
-        images: imageUrls
+        images: imageItems
       }
     });
     await browser.tabs.create({ url: browser.runtime.getURL("preview.html") });
 
-    const summary = `Opened preview tab with ${imageUrls.length} image${imageUrls.length === 1 ? "" : "s"}.`;
+    const summary = `Opened preview tab with ${imageItems.length} image${imageItems.length === 1 ? "" : "s"}.`;
     setStatus(result.failures.length ? `${summary}\n\nSkipped/failed:\n${result.failures.join("\n")}` : summary);
   } catch (error) {
     setStatus(`Failed to preview selector images: ${error.message}`);
@@ -781,12 +973,19 @@ for (const tabButton of tabButtons) {
 }
 minimizeWindowsButton.addEventListener("click", minimizeOtherWindows);
 restoreMinimizedWindowsButton.addEventListener("click", restoreMinimizedWindows);
+closeOtherWindowsTabsButton.addEventListener("click", closeOtherWindowsAndTabs);
 refreshDesktopHelperButton.addEventListener("click", refreshDesktopHelperStatus);
 runButton.addEventListener("click", runInAllTabs);
+injectCssButton.addEventListener("click", injectCssInAllTabs);
 clearButton.addEventListener("click", async () => {
   codeInput.value = "";
   await saveCode();
   setStatus("Cleared saved code.");
+});
+clearCssButton.addEventListener("click", async () => {
+  customCssInput.value = "";
+  await saveCustomCss();
+  setStatus("Cleared saved CSS.");
 });
 clearFolderButton.addEventListener("click", async () => {
   downloadFolderInput.value = "";
@@ -809,6 +1008,8 @@ clearSelectorButton.addEventListener("click", async () => {
 });
 codeInput.addEventListener("input", saveCode);
 selectorInput.addEventListener("input", saveSelector);
+metadataSelectorInput.addEventListener("input", saveMetadataSelector);
+customCssInput.addEventListener("input", saveCustomCss);
 profileSelect.addEventListener("change", () => {
   profileNameInput.value = profileSelect.value;
 });

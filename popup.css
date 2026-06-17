@@ -185,3 +185,12 @@ button:disabled {
   color: #b00020;
   font-weight: 700;
 }
+
+#custom-css {
+  min-height: 100px;
+}
+
+button.danger {
+  border-color: #b00020;
+  color: #b00020;
+}

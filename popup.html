@@ -18,6 +18,7 @@
         <div class="actions wrap">
           <button id="minimize-windows" type="button">Minimize other windows</button>
           <button id="restore-minimized-windows" type="button">Restore minimized windows</button>
+          <button id="close-other-windows-tabs" type="button" class="danger">Close other windows/tabs</button>
           <button id="refresh-desktop-helper" type="button" class="secondary">Check desktop helper</button>
         </div>
         <p class="helper-status">Desktop helper: <span id="desktop-helper-status">Not checked</span></p>
@@ -43,6 +44,13 @@
             <button id="run" type="button">Run in all tabs</button>
             <button id="clear" type="button" class="secondary">Clear</button>
           </div>
+
+          <label for="custom-css">CSS to append to each tab</label>
+          <textarea id="custom-css" spellcheck="false" placeholder="img { outline: 3px solid orange; }"></textarea>
+          <div class="actions">
+            <button id="inject-css" type="button">Inject CSS in all tabs</button>
+            <button id="clear-css" type="button" class="secondary">Clear CSS</button>
+          </div>
         </section>
 
         <section aria-labelledby="download-heading">
@@ -65,6 +73,9 @@
           </div>
           <label for="selector">CSS selector for documents or images</label>
           <input id="selector" type="text" placeholder="a[href$='.pdf'], img">
+          <label for="metadata-selector">Metadata text selector</label>
+          <input id="metadata-selector" type="text" placeholder="figcaption, .caption, h1 (optional)">
+          <p class="field-help">When set, the matched text is saved beside each downloaded selector image as a .txt file with the same base filename.</p>
           <div class="actions wrap">
             <button id="download-selector-documents" type="button">Save selector matches</button>
             <button id="preview-selector-images" type="button">Preview selector images</button>
@@ -92,7 +103,7 @@
       <section id="panel-profiles" class="tab-panel" aria-labelledby="tab-profiles" hidden>
         <section aria-labelledby="profiles-heading">
           <h2 id="profiles-heading">Profiles</h2>
-          <p class="hint">Save, load, or remove field presets for code, selectors, download folders, jQuery, and domain filters.</p>
+          <p class="hint">Save, load, or remove field presets for code, CSS, selectors, metadata selectors, download folders, jQuery, and domain filters.</p>
           <label for="profile-name">Profile name</label>
           <input id="profile-name" type="text" placeholder="Example: PDF scraper">
           <label for="profile-select">Saved profiles</label>
