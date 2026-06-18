@@ -57,7 +57,7 @@ The download subfolder field is optional. When it is set, downloads are saved un
 
 ## Saving documents by selector
 
-The selector downloader runs `document.querySelectorAll()` in each compatible tab and collects URLs from matching elements' `href`, `src`, `currentSrc`, `data`, and `poster` values. If **Metadata text selector** is set, the runner also captures matching text near each document/image element. With **Write metadata into JPEG EXIF** enabled, JPEG downloads are rewritten through piexifjs with that text stored in the EXIF ImageDescription field when possible. With **Download metadata .txt sidecar files** enabled, the same metadata is also saved as a `.txt` file with the same base filename as the image/document. Example selectors include:
+The selector downloader runs `document.querySelectorAll()` in each compatible tab and collects URLs from matching elements' `href`, `src`, `currentSrc`, `data`, and `poster` values; if no direct image URL is present, it falls back to `srcset`/`srcSet` candidates such as `picture source[type="image/jpeg"]`. If **Metadata text selector** is set, the runner also captures matching text near each document/image element. With **Write metadata into JPEG EXIF** enabled, JPEG downloads are rewritten through piexifjs with that text stored in the EXIF ImageDescription field when possible. With **Download metadata .txt sidecar files** enabled, the same metadata is also saved as a `.txt` file with the same base filename as the image/document. Example selectors include:
 
 - `a[href$='.pdf']` to save linked PDFs.
 - `img` to save images embedded in pages, including `src="data:image/..."` inline images.

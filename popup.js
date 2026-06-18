@@ -917,6 +917,23 @@ function buildSelectorCollector(selector, metadataSelector) {
     const attributes = ["href", "src", "currentSrc", "data", "poster"];
     const items = [];
 
+    function urlsFromSrcset(srcset) {
+      const value = String(srcset || "").trim();
+
+      if (!value) {
+        return [];
+      }
+
+      if (/^data:image\//i.test(value)) {
+        return [value.split(/\s+/)[0]];
+      }
+
+      return value
+        .split(",")
+        .map((candidate) => candidate.trim().split(/\s+/)[0])
+        .filter(Boolean);
+    }
+
     function textFromMetadataElement(element) {
       if (!element || !metadataSelector) {
         return "";
@@ -941,12 +958,26 @@ function buildSelectorCollector(selector, metadataSelector) {
     }
 
     for (const element of document.querySelectorAll(selector)) {
+      let addedDirectImageUrl = false;
+
       if (element.currentSrc) {
         addUrl(element.currentSrc, element);
+        addedDirectImageUrl = true;
       }
 
       for (const attribute of attributes) {
-        addUrl(element.getAttribute(attribute), element);
+        const value = element.getAttribute(attribute);
+        addUrl(value, element);
+
+        if ((attribute === "src" || attribute === "currentSrc") && value) {
+          addedDirectImageUrl = true;
+        }
+      }
+
+      if (!addedDirectImageUrl) {
+        for (const srcsetUrl of urlsFromSrcset(element.srcset || element.srcSet || element.getAttribute("srcset"))) {
+          addUrl(srcsetUrl, element);
+        }
       }
     }
 
