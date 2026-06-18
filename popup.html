@@ -75,7 +75,15 @@
           <input id="selector" type="text" placeholder="a[href$='.pdf'], img">
           <label for="metadata-selector">Metadata text selector</label>
           <input id="metadata-selector" type="text" placeholder="figcaption, .caption, h1 (optional)">
-          <p class="field-help">When set, the matched text is saved beside each downloaded selector image as a .txt file with the same base filename.</p>
+          <p class="field-help">When set, the matched text can be written to JPEG EXIF and/or saved beside each downloaded selector image as a .txt file with the same base filename.</p>
+          <label class="inline-option">
+            <input id="write-metadata-exif" type="checkbox">
+            Write metadata into JPEG EXIF when possible
+          </label>
+          <label class="inline-option">
+            <input id="download-metadata-text" type="checkbox" checked>
+            Download metadata .txt sidecar files
+          </label>
           <div class="actions wrap">
             <button id="download-selector-documents" type="button">Save selector matches</button>
             <button id="preview-selector-images" type="button">Preview selector images</button>
@@ -118,6 +126,7 @@
 
       <pre id="status" role="status" aria-live="polite"></pre>
     </main>
+    <script src="vendor/piexif.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

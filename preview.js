@@ -1,10 +1,14 @@
 const STORAGE_KEYS = {
   previewImages: "allTabsDocumentRunner.previewImages",
-  downloadFolder: "allTabsDocumentRunner.downloadFolder"
+  downloadFolder: "allTabsDocumentRunner.downloadFolder",
+  writeMetadataExif: "allTabsDocumentRunner.writeMetadataExif",
+  downloadMetadataText: "allTabsDocumentRunner.downloadMetadataText"
 };
 const gallery = document.getElementById("gallery");
 const summary = document.getElementById("summary");
 const folderInput = document.getElementById("preview-download-folder");
+const writeMetadataExifInput = document.getElementById("preview-write-metadata-exif");
+const downloadMetadataTextInput = document.getElementById("preview-download-metadata-text");
 const selectAllButton = document.getElementById("select-all");
 const selectNoneButton = document.getElementById("select-none");
 const startSlideshowButton = document.getElementById("start-slideshow");
@@ -28,6 +32,18 @@ let slideshowId = null;
 
 function isDataImageUrl(url) {
   return typeof url === "string" && /^data:image\//i.test(url);
+}
+
+function isJpegUrl(url) {
+  if (isDataImageUrl(url)) {
+    return /^data:image\/jpe?g[;,]/i.test(url);
+  }
+
+  try {
+    return /\.jpe?g$/i.test(new URL(url).pathname);
+  } catch (_error) {
+    return false;
+  }
 }
 
 function sanitizeFolder(folder) {
@@ -106,6 +122,56 @@ function filenameForDownload(url, index) {
   return downloadFolder ? `${downloadFolder}/${filename}` : filename;
 }
 
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(reader.error || new Error("Failed to read image blob.")));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function urlToDataUrl(url) {
+  if (isDataImageUrl(url)) {
+    return url;
+  }
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Could not fetch image for EXIF metadata: HTTP ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  return blobToDataUrl(blob);
+}
+
+function metadataToText(value) {
+  return String(value || "").replace(/\r?\n/g, "\n").trim();
+}
+
+async function imageUrlWithExifMetadata(url, index) {
+  const text = metadataToText(metadata[index]);
+
+  if (!writeMetadataExifInput.checked || !text || !isJpegUrl(url) || typeof piexif === "undefined") {
+    return displayUrls[index] || url;
+  }
+
+  try {
+    const dataUrl = await urlToDataUrl(url);
+    const exifObject = piexif.load(dataUrl);
+    exifObject["0th"] = exifObject["0th"] || {};
+    exifObject.Exif = exifObject.Exif || {};
+    exifObject["0th"][piexif.ImageIFD.ImageDescription] = text;
+    exifObject["0th"][piexif.ImageIFD.Software] = "All Tabs Document Runner";
+    const exifBytes = piexif.dump(exifObject);
+    return piexif.insert(exifBytes, dataUrl);
+  } catch (error) {
+    console.warn("Could not write EXIF metadata; downloading original image instead.", error);
+    return displayUrls[index] || url;
+  }
+}
+
 function textFilenameForDownload(url, index) {
   const filename = filenameFromUrl(url, index);
   const dotIndex = filename.lastIndexOf(".");
@@ -116,9 +182,9 @@ function textFilenameForDownload(url, index) {
 }
 
 async function downloadMetadataFile(url, index) {
-  const text = String(metadata[index] || "").replace(/\r?\n/g, "\n").trim();
+  const text = metadataToText(metadata[index]);
 
-  if (!text) {
+  if (!downloadMetadataTextInput.checked || !text) {
     return null;
   }
 
@@ -225,7 +291,7 @@ async function downloadImages(indexes) {
         conflictAction: "uniquify",
         filename: filenameForDownload(url, index),
         saveAs: false,
-        url: displayUrls[index] || url
+        url: await imageUrlWithExifMetadata(url, index)
       });
       await downloadMetadataFile(url, index);
       downloaded += 1;
@@ -307,6 +373,8 @@ async function loadPreview() {
   metadata = imageItems.map((item) => (typeof item === "string" ? "" : item?.metadata || ""));
   displayUrls = images.map((url) => (isDataImageUrl(url) ? dataImageToBlobUrl(url) : url));
   folderInput.value = preview.downloadFolder || saved[STORAGE_KEYS.downloadFolder] || "";
+  writeMetadataExifInput.checked = saved[STORAGE_KEYS.writeMetadataExif] === true;
+  downloadMetadataTextInput.checked = saved[STORAGE_KEYS.downloadMetadataText] !== false;
   selectedIndexes = new Set(images.map((_url, index) => index));
 
   renderGallery();
@@ -328,6 +396,8 @@ stopSlideshowButton.addEventListener("click", stopSlideshow);
 downloadSelectedButton.addEventListener("click", () => downloadImages([...selectedIndexes]));
 downloadAllButton.addEventListener("click", () => downloadImages(images.map((_url, index) => index)));
 folderInput.addEventListener("change", () => saveDownloadFolder().then(() => updateSummary()));
+writeMetadataExifInput.addEventListener("change", () => browser.storage.local.set({ [STORAGE_KEYS.writeMetadataExif]: writeMetadataExifInput.checked }));
+downloadMetadataTextInput.addEventListener("change", () => browser.storage.local.set({ [STORAGE_KEYS.downloadMetadataText]: downloadMetadataTextInput.checked }));
 closeLightboxButton.addEventListener("click", closeLightbox);
 previousImageButton.addEventListener("click", () => showImage(currentIndex - 1));
 nextImageButton.addEventListener("click", () => showImage(currentIndex + 1));

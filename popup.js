@@ -2,6 +2,8 @@ const codeInput = document.getElementById("code");
 const selectorInput = document.getElementById("selector");
 const metadataSelectorInput = document.getElementById("metadata-selector");
 const customCssInput = document.getElementById("custom-css");
+const writeMetadataExifInput = document.getElementById("write-metadata-exif");
+const downloadMetadataTextInput = document.getElementById("download-metadata-text");
 const ensureJQueryInput = document.getElementById("ensure-jquery");
 const domainFilterInput = document.getElementById("domain-filter");
 const profileNameInput = document.getElementById("profile-name");
@@ -39,6 +41,8 @@ const STORAGE_KEYS = {
   selector: "allTabsDocumentRunner.selector",
   metadataSelector: "allTabsDocumentRunner.metadataSelector",
   customCss: "allTabsDocumentRunner.customCss",
+  writeMetadataExif: "allTabsDocumentRunner.writeMetadataExif",
+  downloadMetadataText: "allTabsDocumentRunner.downloadMetadataText",
   downloadFolder: "allTabsDocumentRunner.downloadFolder",
   ensureJQuery: "allTabsDocumentRunner.ensureJQuery",
   domainFilter: "allTabsDocumentRunner.domainFilter",
@@ -86,6 +90,18 @@ function isDocumentUrl(url) {
 
 function isImageUrl(url) {
   return isDataImageUrl(url) || hasExtension(url, IMAGE_EXTENSIONS);
+}
+
+function isJpegUrl(url) {
+  if (isDataImageUrl(url)) {
+    return /^data:image\/jpe?g[;,]/i.test(url);
+  }
+
+  try {
+    return /\.jpe?g$/i.test(new URL(url).pathname);
+  } catch (_error) {
+    return false;
+  }
 }
 
 function uniqueUrls(urls) {
@@ -179,6 +195,52 @@ function filenameForDownload(url, index, folder = getDownloadFolder()) {
   return folder ? `${folder}/${filename}` : filename;
 }
 
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(reader.error || new Error("Failed to read image blob.")));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function urlToDataUrl(url) {
+  if (isDataImageUrl(url)) {
+    return url;
+  }
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Could not fetch image for EXIF metadata: HTTP ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  return blobToDataUrl(blob);
+}
+
+async function imageUrlWithExifMetadata(url, metadata) {
+  const text = metadataToText(metadata);
+
+  if (!writeMetadataExifInput.checked || !text || !isJpegUrl(url) || typeof piexif === "undefined") {
+    return url;
+  }
+
+  try {
+    const dataUrl = await urlToDataUrl(url);
+    const exifObject = piexif.load(dataUrl);
+    exifObject["0th"] = exifObject["0th"] || {};
+    exifObject.Exif = exifObject.Exif || {};
+    exifObject["0th"][piexif.ImageIFD.ImageDescription] = text;
+    exifObject["0th"][piexif.ImageIFD.Software] = "All Tabs Document Runner";
+    const exifBytes = piexif.dump(exifObject);
+    return piexif.insert(exifBytes, dataUrl);
+  } catch (error) {
+    console.warn("Could not write EXIF metadata; downloading original image instead.", error);
+    return url;
+  }
+}
+
 function textFilenameForDownload(url, index, folder = getDownloadFolder()) {
   const filename = filenameFromUrl(url, index);
   const dotIndex = filename.lastIndexOf(".");
@@ -194,7 +256,7 @@ function metadataToText(metadata) {
 async function downloadMetadataFile(url, index, metadata, folder = getDownloadFolder()) {
   const text = metadataToText(metadata);
 
-  if (!text) {
+  if (!downloadMetadataTextInput.checked || !text) {
     return null;
   }
 
@@ -213,9 +275,18 @@ async function downloadMetadataFile(url, index, metadata, folder = getDownloadFo
 }
 
 async function downloadUrl(url, index, folder = getDownloadFolder(), metadata = "") {
-  const downloadSource = isDataImageUrl(url) ? dataImageToBlobUrl(url) : url;
+  let downloadSource = isDataImageUrl(url) ? dataImageToBlobUrl(url) : url;
 
   try {
+    const exifSource = await imageUrlWithExifMetadata(url, metadata);
+
+    if (exifSource !== url) {
+      if (downloadSource !== url) {
+        URL.revokeObjectURL(downloadSource);
+      }
+      downloadSource = exifSource;
+    }
+
     const downloadId = await browser.downloads.download({
       conflictAction: "uniquify",
       filename: filenameForDownload(url, index, folder),
@@ -225,7 +296,7 @@ async function downloadUrl(url, index, folder = getDownloadFolder(), metadata = 
     await downloadMetadataFile(url, index, metadata, folder);
     return downloadId;
   } finally {
-    if (downloadSource !== url) {
+    if (downloadSource !== url && downloadSource.startsWith("blob:")) {
       window.setTimeout(() => URL.revokeObjectURL(downloadSource), 30000);
     }
   }
@@ -241,6 +312,8 @@ function setBusy(isBusy) {
   clearButton.disabled = isBusy;
   injectCssButton.disabled = isBusy;
   clearCssButton.disabled = isBusy;
+  writeMetadataExifInput.disabled = isBusy;
+  downloadMetadataTextInput.disabled = isBusy;
   clearFolderButton.disabled = isBusy;
   saveProfileButton.disabled = isBusy;
   loadProfileButton.disabled = isBusy;
@@ -413,6 +486,8 @@ async function restoreSavedValues() {
   selectorInput.value = savedValues[STORAGE_KEYS.selector] || "";
   metadataSelectorInput.value = savedValues[STORAGE_KEYS.metadataSelector] || "";
   customCssInput.value = savedValues[STORAGE_KEYS.customCss] || "";
+  writeMetadataExifInput.checked = savedValues[STORAGE_KEYS.writeMetadataExif] === true;
+  downloadMetadataTextInput.checked = savedValues[STORAGE_KEYS.downloadMetadataText] !== false;
   downloadFolderInput.value = savedValues[STORAGE_KEYS.downloadFolder] || "";
   domainFilterInput.value = savedValues[STORAGE_KEYS.domainFilter] || "";
   ensureJQueryInput.checked = savedValues[STORAGE_KEYS.ensureJQuery] !== false;
@@ -434,6 +509,13 @@ async function saveMetadataSelector() {
 
 async function saveCustomCss() {
   await browser.storage.local.set({ [STORAGE_KEYS.customCss]: customCssInput.value });
+}
+
+async function saveMetadataOptions() {
+  await browser.storage.local.set({
+    [STORAGE_KEYS.writeMetadataExif]: writeMetadataExifInput.checked,
+    [STORAGE_KEYS.downloadMetadataText]: downloadMetadataTextInput.checked
+  });
 }
 
 async function saveDownloadFolder() {
@@ -458,6 +540,8 @@ function currentProfileValues() {
     selector: selectorInput.value,
     metadataSelector: metadataSelectorInput.value.trim(),
     customCss: customCssInput.value,
+    writeMetadataExif: writeMetadataExifInput.checked,
+    downloadMetadataText: downloadMetadataTextInput.checked,
     downloadFolder: getDownloadFolder(),
     domainFilter: normalizeDomainFilter(domainFilterInput.value),
     ensureJQuery: ensureJQueryInput.checked
@@ -497,7 +581,7 @@ async function saveProfile() {
     return;
   }
 
-  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
+  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
   const profiles = await getProfiles();
   profiles[name] = currentProfileValues();
   await browser.storage.local.set({ [STORAGE_KEYS.profiles]: profiles });
@@ -521,11 +605,13 @@ async function loadProfile() {
   selectorInput.value = profile.selector || "";
   metadataSelectorInput.value = profile.metadataSelector || "";
   customCssInput.value = profile.customCss || "";
+  writeMetadataExifInput.checked = profile.writeMetadataExif === true;
+  downloadMetadataTextInput.checked = profile.downloadMetadataText !== false;
   downloadFolderInput.value = profile.downloadFolder || "";
   domainFilterInput.value = profile.domainFilter || "";
   ensureJQueryInput.checked = profile.ensureJQuery !== false;
   profileNameInput.value = name;
-  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
+  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
   setStatus(`Loaded profile: ${name}`);
 }
 
@@ -911,6 +997,7 @@ async function saveSelectorDocuments() {
 
   try {
     await saveDownloadFolder();
+    await saveMetadataOptions();
     const result = await getSelectorUrls();
 
     if (!result) {
@@ -937,6 +1024,7 @@ async function previewSelectorImages() {
 
   try {
     await saveDownloadFolder();
+    await saveMetadataOptions();
     const result = await getSelectorUrls();
 
     if (!result) {
@@ -1019,6 +1107,8 @@ tabSetSelect.addEventListener("change", () => {
 downloadFolderInput.addEventListener("change", saveDownloadFolder);
 domainFilterInput.addEventListener("change", saveDomainFilter);
 ensureJQueryInput.addEventListener("change", saveEnsureJQuery);
+writeMetadataExifInput.addEventListener("change", saveMetadataOptions);
+downloadMetadataTextInput.addEventListener("change", saveMetadataOptions);
 
 restoreSavedValues().catch((error) => setStatus(`Failed to restore saved values: ${error.message}`));
 refreshDesktopHelperStatus();

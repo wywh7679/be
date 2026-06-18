@@ -6,9 +6,10 @@ A Firefox browser extension that opens as a full-page tool for running JavaScrip
 
 - `manifest.json` declares the Firefox WebExtension, toolbar button, background script, and permissions required to enumerate tabs, persist snippets/selectors/folders/previews, inject scripts, open extension tabs, and queue downloads.
 - `background.js` opens the full-page extension UI when the toolbar button is clicked.
-- `app.html`, `popup.css`, and `popup.js` provide the tabbed full-page UI for Run/Save, Tab/Window, and Profiles workflows, plus field profiles, saved tab/window sets, JavaScript execution, custom CSS injection, optional jQuery injection, domain-limited tab targeting, metadata sidecar files for selector downloads, download subfolder selection, document downloads, image previews, browser-window close/minimize/restore actions, and optional desktop-helper integration.
+- `app.html`, `popup.css`, and `popup.js` provide the tabbed full-page UI for Run/Save, Tab/Window, and Profiles workflows, plus field profiles, saved tab/window sets, JavaScript execution, custom CSS injection, optional jQuery injection, domain-limited tab targeting, metadata EXIF writing for JPEG downloads, optional metadata sidecar files for selector downloads, download subfolder selection, document downloads, image previews, browser-window close/minimize/restore actions, and optional desktop-helper integration.
 - `popup.html` remains available as a compact standalone version of the same UI.
 - `vendor/jquery.min.js` is injected into compatible tabs before user code when the jQuery option is enabled and jQuery is not already loaded in the extension content-script context.
+- `vendor/piexif.js` is the MIT-licensed piexifjs library used to write selector metadata into downloaded JPEG EXIF when the option is enabled.
 - `preview.html`, `preview.css`, and `preview.js` render selected images as a four-column thumbnail gallery with multiselect controls, a clickable lightbox, slideshow controls, a preview-page subfolder field, and selected/all download buttons.
 - `windows-helper/` contains an optional Windows 10+ .NET helper executable project that listens on localhost port 7678 and moves Firefox windows between Windows virtual desktops.
 
@@ -56,7 +57,7 @@ The download subfolder field is optional. When it is set, downloads are saved un
 
 ## Saving documents by selector
 
-The selector downloader runs `document.querySelectorAll()` in each compatible tab and collects URLs from matching elements' `href`, `src`, `currentSrc`, `data`, and `poster` values. If **Metadata text selector** is set, the runner also captures matching text near each document/image element and downloads it as a sidecar `.txt` file with the same base filename as the image/document. Example selectors include:
+The selector downloader runs `document.querySelectorAll()` in each compatible tab and collects URLs from matching elements' `href`, `src`, `currentSrc`, `data`, and `poster` values. If **Metadata text selector** is set, the runner also captures matching text near each document/image element. With **Write metadata into JPEG EXIF** enabled, JPEG downloads are rewritten through piexifjs with that text stored in the EXIF ImageDescription field when possible. With **Download metadata .txt sidecar files** enabled, the same metadata is also saved as a `.txt` file with the same base filename as the image/document. Example selectors include:
 
 - `a[href$='.pdf']` to save linked PDFs.
 - `img` to save images embedded in pages, including `src="data:image/..."` inline images.
@@ -64,6 +65,6 @@ The selector downloader runs `document.querySelectorAll()` in each compatible ta
 
 ## Previewing images
 
-**Preview selector images** collects image-like URLs from the current selector, including inline `data:image` URLs from `img` tags, converts inline data images to image blobs for preview/download, opens a new extension tab, and displays the full images as contained thumbnails four per row. Previewed images start selected by default. Use **Select all**, **Select none**, or individual thumbnail checkboxes to choose images, click any thumbnail to open the lightbox, use the arrow buttons or keyboard arrows to move between images, click **Start slideshow** to advance automatically, click **Download selected** to save only checked images, or click **Download all images** to save the entire preview set. If metadata was captured for a preview image, its download also queues a same-base-name `.txt` sidecar file.
+**Preview selector images** collects image-like URLs from the current selector, including inline `data:image` URLs from `img` tags, converts inline data images to image blobs for preview/download, opens a new extension tab, and displays the full images as contained thumbnails four per row. Previewed images start selected by default. Use **Select all**, **Select none**, or individual thumbnail checkboxes to choose images, click any thumbnail to open the lightbox, use the arrow buttons or keyboard arrows to move between images, click **Start slideshow** to advance automatically, click **Download selected** to save only checked images, or click **Download all images** to save the entire preview set. If metadata was captured for a preview image, its download can also write JPEG EXIF metadata and/or queue a same-base-name `.txt` sidecar file depending on the selected metadata options.
 
 Some internal pages, privileged browser pages, protected PDF viewer pages, and pages where extensions cannot inject scripts will be skipped and reported in the popup status output.

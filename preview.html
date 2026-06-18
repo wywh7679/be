@@ -19,6 +19,14 @@
       </div>
       <label class="folder-label" for="preview-download-folder">Download subfolder</label>
       <input id="preview-download-folder" type="text" placeholder="optional/subfolder">
+      <label class="inline-option">
+        <input id="preview-write-metadata-exif" type="checkbox">
+        Write metadata into JPEG EXIF when possible
+      </label>
+      <label class="inline-option">
+        <input id="preview-download-metadata-text" type="checkbox" checked>
+        Download metadata .txt sidecar files
+      </label>
       <p id="summary" role="status" aria-live="polite">Loading images...</p>
     </header>
 
@@ -32,6 +40,7 @@
       <p id="lightbox-caption"></p>
     </div>
 
+    <script src="vendor/piexif.js"></script>
     <script src="preview.js"></script>
   </body>
 </html>
