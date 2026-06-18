@@ -219,6 +219,12 @@ async function urlToDataUrl(url) {
   return blobToDataUrl(blob);
 }
 
+async function dataUrlToBlobUrl(dataUrl) {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
 async function imageUrlWithExifMetadata(url, metadata) {
   const text = metadataToText(metadata);
 
@@ -234,7 +240,7 @@ async function imageUrlWithExifMetadata(url, metadata) {
     exifObject["0th"][piexif.ImageIFD.ImageDescription] = text;
     exifObject["0th"][piexif.ImageIFD.Software] = "All Tabs Document Runner";
     const exifBytes = piexif.dump(exifObject);
-    return piexif.insert(exifBytes, dataUrl);
+    return dataUrlToBlobUrl(piexif.insert(exifBytes, dataUrl));
   } catch (error) {
     console.warn("Could not write EXIF metadata; downloading original image instead.", error);
     return url;

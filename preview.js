@@ -146,6 +146,12 @@ async function urlToDataUrl(url) {
   return blobToDataUrl(blob);
 }
 
+async function dataUrlToBlobUrl(dataUrl) {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
 function metadataToText(value) {
   return String(value || "").replace(/\r?\n/g, "\n").trim();
 }
@@ -165,7 +171,7 @@ async function imageUrlWithExifMetadata(url, index) {
     exifObject["0th"][piexif.ImageIFD.ImageDescription] = text;
     exifObject["0th"][piexif.ImageIFD.Software] = "All Tabs Document Runner";
     const exifBytes = piexif.dump(exifObject);
-    return piexif.insert(exifBytes, dataUrl);
+    return dataUrlToBlobUrl(piexif.insert(exifBytes, dataUrl));
   } catch (error) {
     console.warn("Could not write EXIF metadata; downloading original image instead.", error);
     return displayUrls[index] || url;
@@ -285,18 +291,24 @@ async function downloadImages(indexes) {
 
   for (const index of indexes) {
     const url = images[index];
+    let downloadSource = displayUrls[index] || url;
 
     try {
+      downloadSource = await imageUrlWithExifMetadata(url, index);
       await browser.downloads.download({
         conflictAction: "uniquify",
         filename: filenameForDownload(url, index),
         saveAs: false,
-        url: await imageUrlWithExifMetadata(url, index)
+        url: downloadSource
       });
       await downloadMetadataFile(url, index);
       downloaded += 1;
     } catch (error) {
       failures.push(`${url}: ${error.message}`);
+    } finally {
+      if (downloadSource.startsWith("blob:") && downloadSource !== displayUrls[index]) {
+        window.setTimeout(() => URL.revokeObjectURL(downloadSource), 30000);
+      }
     }
   }
 
