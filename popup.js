@@ -85,7 +85,7 @@ function hasExtension(url, extensions) {
 }
 
 function isDocumentUrl(url) {
-  return hasExtension(url, DOCUMENT_EXTENSIONS);
+  return isDataImageUrl(url) || hasExtension(url, DOCUMENT_EXTENSIONS);
 }
 
 function isImageUrl(url) {
@@ -175,9 +175,19 @@ function extensionFromDataImageUrl(url) {
   return match[1].toLowerCase().replace("jpeg", "jpg").replace(/[^a-z0-9]/g, "") || "png";
 }
 
+function hashString(value) {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
+  }
+
+  return Math.abs(hash).toString(36);
+}
+
 function filenameFromUrl(url, index) {
   if (isDataImageUrl(url)) {
-    return `data-image-${index + 1}.${extensionFromDataImageUrl(url)}`;
+    return `data-image-${index + 1}-${hashString(url)}.${extensionFromDataImageUrl(url)}`;
   }
 
   try {
