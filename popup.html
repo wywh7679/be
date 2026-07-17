@@ -57,6 +57,10 @@
           <label for="domain-filter">Only include tabs from domain</label>
           <input id="domain-filter" type="text" placeholder="example.com (optional)">
           <p class="field-help">Leave blank to include all compatible tabs. Entering example.com also includes subdomains like www.example.com.</p>
+          <label class="inline-option">
+            <input id="current-window-only" type="checkbox">
+            Only include tabs in the current Tor Browser window
+          </label>
 
           <label for="download-folder">Download subfolder</label>
           <input id="download-folder" type="text" placeholder="optional/subfolder">
@@ -108,7 +112,7 @@
       <section id="panel-profiles" class="tab-panel" aria-labelledby="tab-profiles" hidden>
         <section aria-labelledby="profiles-heading">
           <h2 id="profiles-heading">Profiles</h2>
-          <p class="hint">Save, load, or remove field presets for code, CSS, selectors, metadata selectors, download folders, jQuery, and domain filters.</p>
+          <p class="hint">Save, load, or remove field presets for code, CSS, selectors, metadata selectors, download folders, jQuery, domain filters, and current-window scope.</p>
           <label for="profile-name">Profile name</label>
           <input id="profile-name" type="text" placeholder="Example: PDF scraper">
           <label for="profile-select">Saved profiles</label>

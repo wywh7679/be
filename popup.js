@@ -6,6 +6,7 @@ const writeMetadataExifInput = document.getElementById("write-metadata-exif");
 const downloadMetadataTextInput = document.getElementById("download-metadata-text");
 const ensureJQueryInput = document.getElementById("ensure-jquery");
 const domainFilterInput = document.getElementById("domain-filter");
+const currentWindowOnlyInput = document.getElementById("current-window-only");
 const profileNameInput = document.getElementById("profile-name");
 const profileSelect = document.getElementById("profile-select");
 const tabSetNameInput = document.getElementById("tabset-name");
@@ -43,6 +44,7 @@ const STORAGE_KEYS = {
   downloadFolder: "allTabsDocumentRunner.downloadFolder",
   ensureJQuery: "allTabsDocumentRunner.ensureJQuery",
   domainFilter: "allTabsDocumentRunner.domainFilter",
+  currentWindowOnly: "allTabsDocumentRunner.currentWindowOnly",
   profiles: "allTabsDocumentRunner.profiles",
   tabSets: "allTabsDocumentRunner.tabSets",
   previewImages: "allTabsDocumentRunner.previewImages"
@@ -126,7 +128,7 @@ function tabMatchesDomain(tab, domain) {
 async function queryScopedTabs() {
   const domain = normalizeDomainFilter(domainFilterInput.value);
   domainFilterInput.value = domain;
-  const tabs = await browser.tabs.query({});
+  const tabs = await browser.tabs.query(currentWindowOnlyInput.checked ? { currentWindow: true } : {});
   return tabs.filter((tab) => tabMatchesDomain(tab, domain));
 }
 
@@ -327,6 +329,7 @@ function setBusy(isBusy) {
   clearCssButton.disabled = isBusy;
   writeMetadataExifInput.disabled = isBusy;
   downloadMetadataTextInput.disabled = isBusy;
+  currentWindowOnlyInput.disabled = isBusy;
   clearFolderButton.disabled = isBusy;
   saveProfileButton.disabled = isBusy;
   loadProfileButton.disabled = isBusy;
@@ -438,6 +441,7 @@ async function restoreSavedValues() {
   downloadMetadataTextInput.checked = savedValues[STORAGE_KEYS.downloadMetadataText] !== false;
   downloadFolderInput.value = savedValues[STORAGE_KEYS.downloadFolder] || "";
   domainFilterInput.value = savedValues[STORAGE_KEYS.domainFilter] || "";
+  currentWindowOnlyInput.checked = savedValues[STORAGE_KEYS.currentWindowOnly] === true;
   ensureJQueryInput.checked = savedValues[STORAGE_KEYS.ensureJQuery] !== false;
   renderProfiles(savedValues[STORAGE_KEYS.profiles] || {});
   renderTabSets(savedValues[STORAGE_KEYS.tabSets] || {});
@@ -478,6 +482,10 @@ async function saveDomainFilter() {
   await browser.storage.local.set({ [STORAGE_KEYS.domainFilter]: domain });
 }
 
+async function saveCurrentWindowOnly() {
+  await browser.storage.local.set({ [STORAGE_KEYS.currentWindowOnly]: currentWindowOnlyInput.checked });
+}
+
 async function saveEnsureJQuery() {
   await browser.storage.local.set({ [STORAGE_KEYS.ensureJQuery]: ensureJQueryInput.checked });
 }
@@ -492,6 +500,7 @@ function currentProfileValues() {
     downloadMetadataText: downloadMetadataTextInput.checked,
     downloadFolder: getDownloadFolder(),
     domainFilter: normalizeDomainFilter(domainFilterInput.value),
+    currentWindowOnly: currentWindowOnlyInput.checked,
     ensureJQuery: ensureJQueryInput.checked
   };
 }
@@ -529,7 +538,7 @@ async function saveProfile() {
     return;
   }
 
-  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
+  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveCurrentWindowOnly(), saveEnsureJQuery()]);
   const profiles = await getProfiles();
   profiles[name] = currentProfileValues();
   await browser.storage.local.set({ [STORAGE_KEYS.profiles]: profiles });
@@ -557,9 +566,10 @@ async function loadProfile() {
   downloadMetadataTextInput.checked = profile.downloadMetadataText !== false;
   downloadFolderInput.value = profile.downloadFolder || "";
   domainFilterInput.value = profile.domainFilter || "";
+  currentWindowOnlyInput.checked = profile.currentWindowOnly === true;
   ensureJQueryInput.checked = profile.ensureJQuery !== false;
   profileNameInput.value = name;
-  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
+  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveCurrentWindowOnly(), saveEnsureJQuery()]);
   setStatus(`Loaded profile: ${name}`);
 }
 
@@ -1084,6 +1094,7 @@ tabSetSelect.addEventListener("change", () => {
 });
 downloadFolderInput.addEventListener("change", saveDownloadFolder);
 domainFilterInput.addEventListener("change", saveDomainFilter);
+currentWindowOnlyInput.addEventListener("change", saveCurrentWindowOnly);
 ensureJQueryInput.addEventListener("change", saveEnsureJQuery);
 writeMetadataExifInput.addEventListener("change", saveMetadataOptions);
 downloadMetadataTextInput.addEventListener("change", saveMetadataOptions);
