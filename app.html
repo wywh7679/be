@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>All Tabs Document Runner for Tor Browser</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <h1>All Tabs Document Runner for Tor Browser</h1>
+      <p class="warning">
+        Installing extensions and running custom code can change your Tor Browser fingerprint or expose information. JavaScript runs in compatible tabs; only use trusted code and documents.
+      </p>
+
+      <section aria-labelledby="window-actions-heading" class="top-actions">
+        <h2 id="window-actions-heading">Window actions</h2>
+        <div class="actions wrap">
+          <button id="minimize-windows" type="button">Minimize other windows</button>
+          <button id="restore-minimized-windows" type="button">Restore minimized windows</button>
+          <button id="close-other-windows-tabs" type="button" class="danger">Close other windows/tabs</button>
+        </div>
+      </section>
+
+      <nav class="tabs" aria-label="Runner sections">
+        <button class="tab active" id="tab-run-save" type="button" aria-controls="panel-run-save" aria-selected="true">Run/Save</button>
+        <button class="tab" id="tab-tab-window" type="button" aria-controls="panel-tab-window" aria-selected="false">Tab/Window</button>
+        <button class="tab" id="tab-profiles" type="button" aria-controls="panel-profiles" aria-selected="false">Profiles</button>
+      </nav>
+
+      <section id="panel-run-save" class="tab-panel active" aria-labelledby="tab-run-save">
+        <section aria-labelledby="script-heading">
+          <h2 id="script-heading">Run JavaScript</h2>
+          <label for="code">JavaScript to execute</label>
+          <label class="inline-option">
+            <input id="ensure-jquery" type="checkbox" checked>
+            Load jQuery in each tab before running code if it is not already loaded
+          </label>
+          <textarea id="code" spellcheck="false" placeholder="document.body.style.outline = '4px solid orange';"></textarea>
+          <div class="actions">
+            <button id="run" type="button">Run in all tabs</button>
+            <button id="clear" type="button" class="secondary">Clear</button>
+          </div>
+
+          <label for="custom-css">CSS to append to each tab</label>
+          <textarea id="custom-css" spellcheck="false" placeholder="img { outline: 3px solid orange; }"></textarea>
+          <div class="actions">
+            <button id="inject-css" type="button">Inject CSS in all tabs</button>
+            <button id="clear-css" type="button" class="secondary">Clear CSS</button>
+          </div>
+        </section>
+
+        <section aria-labelledby="download-heading">
+          <h2 id="download-heading">Save documents</h2>
+          <p class="hint">Download open image/PDF tabs, collect documents with a CSS selector, or preview selected images in a gallery tab.</p>
+
+          <label for="domain-filter">Only include tabs from domain</label>
+          <input id="domain-filter" type="text" placeholder="example.com (optional)">
+          <p class="field-help">Leave blank to include all compatible tabs. Entering example.com also includes subdomains like www.example.com.</p>
+
+          <label for="download-folder">Download subfolder</label>
+          <input id="download-folder" type="text" placeholder="optional/subfolder">
+          <p class="field-help">Relative to Tor Browser's default downloads folder. Leave blank to use the default folder.</p>
+          <div class="actions">
+            <button id="clear-folder" type="button" class="secondary">Clear folder</button>
+          </div>
+
+          <div class="actions stacked">
+            <button id="download-open-documents" type="button">Save open images/PDFs</button>
+          </div>
+          <label for="selector">CSS selector for documents or images</label>
+          <input id="selector" type="text" placeholder="a[href$='.pdf'], img">
+          <label for="metadata-selector">Metadata text selector</label>
+          <input id="metadata-selector" type="text" placeholder="figcaption, .caption, h1 (optional)">
+          <p class="field-help">When set, the matched text can be written to JPEG EXIF and/or saved beside each downloaded selector image as a .txt file with the same base filename.</p>
+          <label class="inline-option">
+            <input id="write-metadata-exif" type="checkbox">
+            Write metadata into JPEG EXIF when possible
+          </label>
+          <label class="inline-option">
+            <input id="download-metadata-text" type="checkbox" checked>
+            Download metadata .txt sidecar files
+          </label>
+          <div class="actions wrap">
+            <button id="download-selector-documents" type="button">Save selector matches</button>
+            <button id="preview-selector-images" type="button">Preview selector images</button>
+            <button id="clear-selector" type="button" class="secondary">Clear selector</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="panel-tab-window" class="tab-panel" aria-labelledby="tab-tab-window" hidden>
+        <section aria-labelledby="tabsets-heading">
+          <h2 id="tabsets-heading">Tab/window sets</h2>
+          <p class="hint">Save all open normal windows and tabs, then restore them later.</p>
+          <label for="tabset-name">Tab set name</label>
+          <input id="tabset-name" type="text" placeholder="Example: Morning research">
+          <label for="tabset-select">Saved tab sets</label>
+          <select id="tabset-select"></select>
+          <div class="actions wrap">
+            <button id="save-tabset" type="button">Save open tabs/windows</button>
+            <button id="restore-tabset" type="button">Restore tab set</button>
+            <button id="delete-tabset" type="button" class="secondary">Delete tab set</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="panel-profiles" class="tab-panel" aria-labelledby="tab-profiles" hidden>
+        <section aria-labelledby="profiles-heading">
+          <h2 id="profiles-heading">Profiles</h2>
+          <p class="hint">Save, load, or remove field presets for code, CSS, selectors, metadata selectors, download folders, jQuery, and domain filters.</p>
+          <label for="profile-name">Profile name</label>
+          <input id="profile-name" type="text" placeholder="Example: PDF scraper">
+          <label for="profile-select">Saved profiles</label>
+          <select id="profile-select"></select>
+          <div class="actions wrap">
+            <button id="save-profile" type="button">Save profile</button>
+            <button id="load-profile" type="button">Load profile</button>
+            <button id="delete-profile" type="button" class="secondary">Delete profile</button>
+          </div>
+        </section>
+      </section>
+
+      <pre id="status" role="status" aria-live="polite"></pre>
+    </main>
+    <script src="vendor/piexif.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
