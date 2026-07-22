@@ -194,3 +194,34 @@ button.danger {
   border-color: #b00020;
   color: #b00020;
 }
+
+body {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.main {
+  background: rgba(255, 255, 255, var(--main-background-opacity, 1));
+  border-radius: 0.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .main {
+    background: rgba(32, 32, 32, var(--main-background-opacity, 1));
+  }
+}
+
+body.hide-hints .hint,
+body.hide-warnings .warning {
+  display: none;
+}
+
+.font-preview {
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 0.35rem;
+  font-size: 1.25rem;
+  margin: 0 0 0.75rem;
+  padding: 0.75rem;
+}

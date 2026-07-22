@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="popup.css">
   </head>
   <body>
-    <main>
+    <main class="main">
       <h1>All Tabs Document Runner</h1>
       <p class="warning">
         JavaScript runs in every compatible tab and downloads can save files from matching page URLs. Only run code and save documents you trust.
@@ -29,6 +29,7 @@
         <button class="tab active" id="tab-run-save" type="button" aria-controls="panel-run-save" aria-selected="true">Run/Save</button>
         <button class="tab" id="tab-tab-window" type="button" aria-controls="panel-tab-window" aria-selected="false">Tab/Window</button>
         <button class="tab" id="tab-profiles" type="button" aria-controls="panel-profiles" aria-selected="false">Profiles</button>
+        <button class="tab" id="tab-settings" type="button" aria-controls="panel-settings" aria-selected="false">Settings</button>
       </nav>
 
       <section id="panel-run-save" class="tab-panel active" aria-labelledby="tab-run-save">
@@ -126,6 +127,35 @@
             <button id="save-profile" type="button">Save profile</button>
             <button id="load-profile" type="button">Load profile</button>
             <button id="delete-profile" type="button" class="secondary">Delete profile</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="panel-settings" class="tab-panel" aria-labelledby="tab-settings" hidden>
+        <section aria-labelledby="settings-heading">
+          <h2 id="settings-heading">Settings</h2>
+          <p class="hint">Customize helper text, warnings, and the extension page appearance.</p>
+          <label class="inline-option">
+            <input id="show-hints" type="checkbox" checked>
+            Show hint text
+          </label>
+          <label class="inline-option">
+            <input id="show-warnings" type="checkbox" checked>
+            Show warning text
+          </label>
+          <label for="background-image-url">Body background image URL</label>
+          <input id="background-image-url" type="url" placeholder="https://example.com/background.jpg">
+          <label for="background-image-file">Or choose a body background image</label>
+          <input id="background-image-file" type="file" accept="image/*">
+          <p class="field-help">Leave both blank to use the default body background. Chosen image files are saved in extension storage as data URLs.</p>
+          <label for="main-background-opacity">Main background opacity: <span id="main-background-opacity-value">100%</span></label>
+          <input id="main-background-opacity" type="range" min="0" max="100" step="5" value="100">
+          <label for="google-font-select">Google font</label>
+          <select id="google-font-select"></select>
+          <p id="font-preview" class="font-preview">The selected font preview appears here.</p>
+          <div class="actions wrap">
+            <button id="clear-background-image" type="button" class="secondary">Clear background image</button>
+            <button id="reset-settings" type="button" class="secondary">Reset settings</button>
           </div>
         </section>
       </section>

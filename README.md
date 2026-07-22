@@ -32,13 +32,17 @@ The extension can connect to an optional helper at `http://127.0.0.1:7678`. Buil
 
 ## Window actions and UI tabs
 
-The runner UI is split into **Run/Save**, **Tab/Window**, and **Profiles** tabs. Above those tabs, **Minimize other windows** minimizes normal Firefox windows except the current runner window, while **Restore minimized windows** restores normal Firefox windows whose state is minimized. **Close other windows/tabs** closes every other normal Firefox window and every other tab in the current runner window, leaving the runner tab open.
+The runner UI is split into **Run/Save**, **Tab/Window**, **Profiles**, and **Settings** tabs. Above those tabs, **Minimize other windows** minimizes normal Firefox windows except the current runner window, while **Restore minimized windows** restores normal Firefox windows whose state is minimized. **Close other windows/tabs** closes every other normal Firefox window and every other tab in the current runner window, leaving the runner tab open.
 
 ## Profiles and domain filters
 
-Profiles save the current JavaScript snippet, custom CSS, selector, metadata selector, download subfolder, current-window-only scope, jQuery setting, and domain filter under a user-provided name. Use **Save profile** to add or update a profile, **Load profile** to populate all fields from the selected profile, and **Delete profile** to remove it.
+Profiles save the current JavaScript snippet, custom CSS, selector, metadata selector, download subfolder, current-window-only scope, jQuery setting, and domain filter under a user-provided name. The separate **Settings** tab persists display preferences for hints, warnings, page background, main-panel opacity, and the selected Google font. Use **Save profile** to add or update a profile, **Load profile** to populate all fields from the selected profile, and **Delete profile** to remove it.
 
 The **Current window only** option limits Run/Save tab operations to tabs in the browser window that contains the runner UI. The optional domain filter further limits tab operations to pages whose hostname exactly matches the entered domain or ends with it as a subdomain. For example, `example.com` includes `example.com` and `www.example.com`, but leaves other open tabs untouched. The current-window and domain filters apply to running JavaScript, injecting CSS, saving open documents, selector downloads, and selector image previews.
+
+## Display settings
+
+Use the **Settings** tab to hide or show `.hint` helper text, hide or show `.warning` warnings, set a body background image file or URL, adjust the `.main` panel background opacity, and choose a Google Font with an in-page preview. These display settings are saved in extension storage and restored whenever the full-page or compact UI opens. Remote background images and Google Fonts are allowed by the extension content security policy.
 
 ## Tab/window sets
 

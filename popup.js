@@ -36,6 +36,16 @@ const closeOtherWindowsTabsButton = document.getElementById("close-other-windows
 const refreshDesktopHelperButton = document.getElementById("refresh-desktop-helper");
 const desktopHelperStatus = document.getElementById("desktop-helper-status");
 const desktopButtons = document.getElementById("desktop-buttons");
+const showHintsInput = document.getElementById("show-hints");
+const showWarningsInput = document.getElementById("show-warnings");
+const backgroundImageUrlInput = document.getElementById("background-image-url");
+const backgroundImageFileInput = document.getElementById("background-image-file");
+const mainBackgroundOpacityInput = document.getElementById("main-background-opacity");
+const mainBackgroundOpacityValue = document.getElementById("main-background-opacity-value");
+const googleFontSelect = document.getElementById("google-font-select");
+const fontPreview = document.getElementById("font-preview");
+const clearBackgroundImageButton = document.getElementById("clear-background-image");
+const resetSettingsButton = document.getElementById("reset-settings");
 
 const STORAGE_KEYS = {
   code: "allTabsDocumentRunner.code",
@@ -50,11 +60,147 @@ const STORAGE_KEYS = {
   domainFilter: "allTabsDocumentRunner.domainFilter",
   profiles: "allTabsDocumentRunner.profiles",
   tabSets: "allTabsDocumentRunner.tabSets",
-  previewImages: "allTabsDocumentRunner.previewImages"
+  previewImages: "allTabsDocumentRunner.previewImages",
+  showHints: "allTabsDocumentRunner.showHints",
+  showWarnings: "allTabsDocumentRunner.showWarnings",
+  backgroundImageUrl: "allTabsDocumentRunner.backgroundImageUrl",
+  mainBackgroundOpacity: "allTabsDocumentRunner.mainBackgroundOpacity",
+  googleFont: "allTabsDocumentRunner.googleFont"
 };
+
+const GOOGLE_FONTS = [
+  { label: "Default system font", value: "" },
+  { label: "Inter", value: "Inter" },
+  { label: "Roboto", value: "Roboto" },
+  { label: "Open Sans", value: "Open Sans" },
+  { label: "Lato", value: "Lato" },
+  { label: "Montserrat", value: "Montserrat" },
+  { label: "Poppins", value: "Poppins" },
+  { label: "Merriweather", value: "Merriweather" },
+  { label: "Playfair Display", value: "Playfair Display" },
+  { label: "Source Sans 3", value: "Source Sans 3" },
+  { label: "Nunito", value: "Nunito" }
+];
 
 const DOCUMENT_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif", ".bmp", ".tif", ".tiff"];
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif", ".bmp", ".tif", ".tiff"];
+
+function renderGoogleFontOptions() {
+  googleFontSelect.textContent = "";
+
+  for (const font of GOOGLE_FONTS) {
+    const option = document.createElement("option");
+    option.value = font.value;
+    option.textContent = font.label;
+    googleFontSelect.append(option);
+  }
+}
+
+function googleFontUrl(fontName) {
+  return `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName).replace(/%20/g, "+")}:wght@400;600;700&display=swap`;
+}
+
+function ensureGoogleFont(fontName) {
+  document.getElementById("selected-google-font")?.remove();
+
+  if (!fontName) {
+    return;
+  }
+
+  const link = document.createElement("link");
+  link.id = "selected-google-font";
+  link.rel = "stylesheet";
+  link.href = googleFontUrl(fontName);
+  document.head.append(link);
+}
+
+function sanitizeOpacity(value) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return 100;
+  }
+
+  return Math.min(100, Math.max(0, parsed));
+}
+
+function applySettings(settings) {
+  const showHints = settings.showHints !== false;
+  const showWarnings = settings.showWarnings !== false;
+  const backgroundImageUrl = String(settings.backgroundImageUrl || "").trim();
+  const mainBackgroundOpacity = sanitizeOpacity(settings.mainBackgroundOpacity ?? 100);
+  const googleFont = String(settings.googleFont || "");
+
+  document.body.classList.toggle("hide-hints", !showHints);
+  document.body.classList.toggle("hide-warnings", !showWarnings);
+  document.body.style.backgroundImage = backgroundImageUrl ? `url("${backgroundImageUrl.replace(/["\\]/g, "\\$&")}")` : "";
+  document.body.style.fontFamily = googleFont ? `"${googleFont}", system-ui, sans-serif` : "";
+  document.documentElement.style.setProperty("--main-background-opacity", String(mainBackgroundOpacity / 100));
+  ensureGoogleFont(googleFont);
+
+  showHintsInput.checked = showHints;
+  showWarningsInput.checked = showWarnings;
+  backgroundImageUrlInput.value = backgroundImageUrl;
+  mainBackgroundOpacityInput.value = String(mainBackgroundOpacity);
+  mainBackgroundOpacityValue.textContent = `${mainBackgroundOpacity}%`;
+  googleFontSelect.value = googleFont;
+  fontPreview.style.fontFamily = googleFont ? `"${googleFont}", system-ui, sans-serif` : "";
+}
+
+function currentSettingsValues() {
+  return {
+    showHints: showHintsInput.checked,
+    showWarnings: showWarningsInput.checked,
+    backgroundImageUrl: backgroundImageUrlInput.value.trim(),
+    mainBackgroundOpacity: sanitizeOpacity(mainBackgroundOpacityInput.value),
+    googleFont: googleFontSelect.value
+  };
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(reader.error || new Error("Failed to read background image.")));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveBackgroundImageFile() {
+  const [file] = backgroundImageFileInput.files || [];
+
+  if (!file) {
+    return;
+  }
+
+  backgroundImageUrlInput.value = await fileToDataUrl(file);
+  await saveSettings();
+  setStatus("Saved extension background image.");
+}
+
+async function saveSettings() {
+  const settings = currentSettingsValues();
+  applySettings(settings);
+  await browser.storage.local.set({
+    [STORAGE_KEYS.showHints]: settings.showHints,
+    [STORAGE_KEYS.showWarnings]: settings.showWarnings,
+    [STORAGE_KEYS.backgroundImageUrl]: settings.backgroundImageUrl,
+    [STORAGE_KEYS.mainBackgroundOpacity]: settings.mainBackgroundOpacity,
+    [STORAGE_KEYS.googleFont]: settings.googleFont
+  });
+}
+
+async function resetSettings() {
+  applySettings({});
+  await browser.storage.local.remove([
+    STORAGE_KEYS.showHints,
+    STORAGE_KEYS.showWarnings,
+    STORAGE_KEYS.backgroundImageUrl,
+    STORAGE_KEYS.mainBackgroundOpacity,
+    STORAGE_KEYS.googleFont
+  ]);
+  setStatus("Reset extension display settings.");
+}
 
 function setStatus(message) {
   statusOutput.textContent = message;
@@ -360,6 +506,14 @@ function setBusy(isBusy) {
   restoreMinimizedWindowsButton.disabled = isBusy;
   closeOtherWindowsTabsButton.disabled = isBusy;
   refreshDesktopHelperButton.disabled = isBusy;
+  showHintsInput.disabled = isBusy;
+  showWarningsInput.disabled = isBusy;
+  backgroundImageUrlInput.disabled = isBusy;
+  backgroundImageFileInput.disabled = isBusy;
+  mainBackgroundOpacityInput.disabled = isBusy;
+  googleFontSelect.disabled = isBusy;
+  clearBackgroundImageButton.disabled = isBusy;
+  resetSettingsButton.disabled = isBusy;
   downloadOpenDocumentsButton.disabled = isBusy;
   downloadSelectorDocumentsButton.disabled = isBusy;
   previewSelectorImagesButton.disabled = isBusy;
@@ -527,6 +681,13 @@ async function restoreSavedValues() {
   domainFilterInput.value = savedValues[STORAGE_KEYS.domainFilter] || "";
   currentWindowOnlyInput.checked = savedValues[STORAGE_KEYS.currentWindowOnly] === true;
   ensureJQueryInput.checked = savedValues[STORAGE_KEYS.ensureJQuery] !== false;
+  applySettings({
+    showHints: savedValues[STORAGE_KEYS.showHints],
+    showWarnings: savedValues[STORAGE_KEYS.showWarnings],
+    backgroundImageUrl: savedValues[STORAGE_KEYS.backgroundImageUrl],
+    mainBackgroundOpacity: savedValues[STORAGE_KEYS.mainBackgroundOpacity],
+    googleFont: savedValues[STORAGE_KEYS.googleFont]
+  });
   renderProfiles(savedValues[STORAGE_KEYS.profiles] || {});
   renderTabSets(savedValues[STORAGE_KEYS.tabSets] || {});
 }
@@ -1181,6 +1342,20 @@ currentWindowOnlyInput.addEventListener("change", saveCurrentWindowOnly);
 ensureJQueryInput.addEventListener("change", saveEnsureJQuery);
 writeMetadataExifInput.addEventListener("change", saveMetadataOptions);
 downloadMetadataTextInput.addEventListener("change", saveMetadataOptions);
+showHintsInput.addEventListener("change", saveSettings);
+showWarningsInput.addEventListener("change", saveSettings);
+backgroundImageUrlInput.addEventListener("change", saveSettings);
+backgroundImageFileInput.addEventListener("change", saveBackgroundImageFile);
+mainBackgroundOpacityInput.addEventListener("input", saveSettings);
+googleFontSelect.addEventListener("change", saveSettings);
+clearBackgroundImageButton.addEventListener("click", async () => {
+  backgroundImageUrlInput.value = "";
+  backgroundImageFileInput.value = "";
+  await saveSettings();
+  setStatus("Cleared extension background image.");
+});
+resetSettingsButton.addEventListener("click", resetSettings);
 
+renderGoogleFontOptions();
 restoreSavedValues().catch((error) => setStatus(`Failed to restore saved values: ${error.message}`));
 refreshDesktopHelperStatus();
