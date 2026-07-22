@@ -5,6 +5,7 @@ const customCssInput = document.getElementById("custom-css");
 const writeMetadataExifInput = document.getElementById("write-metadata-exif");
 const downloadMetadataTextInput = document.getElementById("download-metadata-text");
 const ensureJQueryInput = document.getElementById("ensure-jquery");
+const currentWindowOnlyInput = document.getElementById("current-window-only");
 const domainFilterInput = document.getElementById("domain-filter");
 const profileNameInput = document.getElementById("profile-name");
 const profileSelect = document.getElementById("profile-select");
@@ -45,6 +46,7 @@ const STORAGE_KEYS = {
   downloadMetadataText: "allTabsDocumentRunner.downloadMetadataText",
   downloadFolder: "allTabsDocumentRunner.downloadFolder",
   ensureJQuery: "allTabsDocumentRunner.ensureJQuery",
+  currentWindowOnly: "allTabsDocumentRunner.currentWindowOnly",
   domainFilter: "allTabsDocumentRunner.domainFilter",
   profiles: "allTabsDocumentRunner.profiles",
   tabSets: "allTabsDocumentRunner.tabSets",
@@ -129,8 +131,24 @@ function tabMatchesDomain(tab, domain) {
 async function queryScopedTabs() {
   const domain = normalizeDomainFilter(domainFilterInput.value);
   domainFilterInput.value = domain;
-  const tabs = await browser.tabs.query({});
+  const queryInfo = currentWindowOnlyInput.checked ? { currentWindow: true } : {};
+  const tabs = await browser.tabs.query(queryInfo);
   return tabs.filter((tab) => tabMatchesDomain(tab, domain));
+}
+
+function describeScope() {
+  const domain = normalizeDomainFilter(domainFilterInput.value);
+  const scopeParts = [];
+
+  if (currentWindowOnlyInput.checked) {
+    scopeParts.push(" in the current window");
+  }
+
+  if (domain) {
+    scopeParts.push(` matching ${domain}`);
+  }
+
+  return scopeParts.join("");
 }
 
 function sanitizeFolder(folder) {
@@ -329,6 +347,7 @@ function setBusy(isBusy) {
   injectCssButton.disabled = isBusy;
   clearCssButton.disabled = isBusy;
   writeMetadataExifInput.disabled = isBusy;
+  currentWindowOnlyInput.disabled = isBusy;
   downloadMetadataTextInput.disabled = isBusy;
   clearFolderButton.disabled = isBusy;
   saveProfileButton.disabled = isBusy;
@@ -506,6 +525,7 @@ async function restoreSavedValues() {
   downloadMetadataTextInput.checked = savedValues[STORAGE_KEYS.downloadMetadataText] !== false;
   downloadFolderInput.value = savedValues[STORAGE_KEYS.downloadFolder] || "";
   domainFilterInput.value = savedValues[STORAGE_KEYS.domainFilter] || "";
+  currentWindowOnlyInput.checked = savedValues[STORAGE_KEYS.currentWindowOnly] === true;
   ensureJQueryInput.checked = savedValues[STORAGE_KEYS.ensureJQuery] !== false;
   renderProfiles(savedValues[STORAGE_KEYS.profiles] || {});
   renderTabSets(savedValues[STORAGE_KEYS.tabSets] || {});
@@ -546,6 +566,10 @@ async function saveDomainFilter() {
   await browser.storage.local.set({ [STORAGE_KEYS.domainFilter]: domain });
 }
 
+async function saveCurrentWindowOnly() {
+  await browser.storage.local.set({ [STORAGE_KEYS.currentWindowOnly]: currentWindowOnlyInput.checked });
+}
+
 async function saveEnsureJQuery() {
   await browser.storage.local.set({ [STORAGE_KEYS.ensureJQuery]: ensureJQueryInput.checked });
 }
@@ -559,6 +583,7 @@ function currentProfileValues() {
     writeMetadataExif: writeMetadataExifInput.checked,
     downloadMetadataText: downloadMetadataTextInput.checked,
     downloadFolder: getDownloadFolder(),
+    currentWindowOnly: currentWindowOnlyInput.checked,
     domainFilter: normalizeDomainFilter(domainFilterInput.value),
     ensureJQuery: ensureJQueryInput.checked
   };
@@ -597,7 +622,7 @@ async function saveProfile() {
     return;
   }
 
-  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
+  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveCurrentWindowOnly(), saveEnsureJQuery()]);
   const profiles = await getProfiles();
   profiles[name] = currentProfileValues();
   await browser.storage.local.set({ [STORAGE_KEYS.profiles]: profiles });
@@ -624,10 +649,11 @@ async function loadProfile() {
   writeMetadataExifInput.checked = profile.writeMetadataExif === true;
   downloadMetadataTextInput.checked = profile.downloadMetadataText !== false;
   downloadFolderInput.value = profile.downloadFolder || "";
+  currentWindowOnlyInput.checked = profile.currentWindowOnly === true;
   domainFilterInput.value = profile.domainFilter || "";
   ensureJQueryInput.checked = profile.ensureJQuery !== false;
   profileNameInput.value = name;
-  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
+  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveCurrentWindowOnly(), saveEnsureJQuery()]);
   setStatus(`Loaded profile: ${name}`);
 }
 
@@ -790,7 +816,7 @@ async function injectCssInAllTabs() {
   setStatus("Injecting CSS into tabs...");
 
   try {
-    await Promise.all([saveCustomCss(), saveDomainFilter()]);
+    await Promise.all([saveCustomCss(), saveDomainFilter(), saveCurrentWindowOnly()]);
     const tabs = await queryScopedTabs();
     const code = buildCssInjector(css);
     let succeeded = 0;
@@ -809,9 +835,7 @@ async function injectCssInAllTabs() {
       }
     }
 
-    const domain = normalizeDomainFilter(domainFilterInput.value);
-    const domainMessage = domain ? ` matching ${domain}` : "";
-    const summary = `Injected CSS into ${succeeded} of ${tabs.length} tabs${domainMessage}.`;
+    const summary = `Injected CSS into ${succeeded} of ${tabs.length} tabs${describeScope()}.`;
     setStatus(failures.length ? `${summary}\n\nSkipped/failed:\n${failures.join("\n")}` : summary);
   } catch (error) {
     setStatus(`Failed to inject CSS: ${error.message}`);
@@ -832,7 +856,7 @@ async function runInAllTabs() {
   setStatus("Finding tabs...");
 
   try {
-    await Promise.all([saveCode(), saveEnsureJQuery(), saveDomainFilter()]);
+    await Promise.all([saveCode(), saveEnsureJQuery(), saveDomainFilter(), saveCurrentWindowOnly()]);
     const tabs = await queryScopedTabs();
     let succeeded = 0;
     const failures = [];
@@ -854,9 +878,7 @@ async function runInAllTabs() {
       }
     }
 
-    const domain = normalizeDomainFilter(domainFilterInput.value);
-    const domainMessage = domain ? ` matching ${domain}` : "";
-    const summary = `Finished. Ran in ${succeeded} of ${tabs.length} tabs${domainMessage}.`;
+    const summary = `Finished. Ran in ${succeeded} of ${tabs.length} tabs${describeScope()}.`;
     setStatus(failures.length ? `${summary}\n\nSkipped/failed:\n${failures.join("\n")}` : summary);
   } catch (error) {
     setStatus(`Failed: ${error.message}`);
@@ -906,12 +928,13 @@ async function saveOpenDocuments() {
   try {
     await saveDownloadFolder();
     await saveDomainFilter();
+    await saveCurrentWindowOnly();
     const tabs = await queryScopedTabs();
     const documentUrls = tabs.map((tab) => tab.url).filter(isDocumentUrl);
     const { downloaded, failures } = await downloadUrls(documentUrls);
     const folder = getDownloadFolder();
     const folderMessage = folder ? ` to ${folder}/` : "";
-    const summary = `Queued ${downloaded} open image/PDF document download${downloaded === 1 ? "" : "s"}${folderMessage}.`;
+    const summary = `Queued ${downloaded} open image/PDF document download${downloaded === 1 ? "" : "s"}${folderMessage}${describeScope()}.`;
     setStatus(failures.length ? `${summary}\n\nFailed downloads:\n${failures.join("\n")}` : summary);
   } catch (error) {
     setStatus(`Failed to save open documents: ${error.message}`);
@@ -1034,6 +1057,7 @@ async function getSelectorUrls() {
   await saveSelector();
   await saveMetadataSelector();
   await saveDomainFilter();
+  await saveCurrentWindowOnly();
   const tabs = await queryScopedTabs();
   return collectUrlsFromSelector(tabs, selector, metadataSelectorInput.value.trim());
 }
@@ -1056,7 +1080,7 @@ async function saveSelectorDocuments() {
     const failures = [...collectionFailures, ...downloadFailures];
     const folder = getDownloadFolder();
     const folderMessage = folder ? ` to ${folder}/` : "";
-    const summary = `Queued ${downloaded} selector-based document download${downloaded === 1 ? "" : "s"}${folderMessage}.`;
+    const summary = `Queued ${downloaded} selector-based document download${downloaded === 1 ? "" : "s"}${folderMessage}${describeScope()}.`;
     setStatus(failures.length ? `${summary}\n\nSkipped/failed:\n${failures.join("\n")}` : summary);
   } catch (error) {
     setStatus(`Failed to save selector matches: ${error.message}`);
@@ -1094,7 +1118,7 @@ async function previewSelectorImages() {
     });
     await browser.tabs.create({ url: browser.runtime.getURL("preview.html") });
 
-    const summary = `Opened preview tab with ${imageItems.length} image${imageItems.length === 1 ? "" : "s"}.`;
+    const summary = `Opened preview tab with ${imageItems.length} image${imageItems.length === 1 ? "" : "s"}${describeScope()}.`;
     setStatus(result.failures.length ? `${summary}\n\nSkipped/failed:\n${result.failures.join("\n")}` : summary);
   } catch (error) {
     setStatus(`Failed to preview selector images: ${error.message}`);
@@ -1153,6 +1177,7 @@ tabSetSelect.addEventListener("change", () => {
 });
 downloadFolderInput.addEventListener("change", saveDownloadFolder);
 domainFilterInput.addEventListener("change", saveDomainFilter);
+currentWindowOnlyInput.addEventListener("change", saveCurrentWindowOnly);
 ensureJQueryInput.addEventListener("change", saveEnsureJQuery);
 writeMetadataExifInput.addEventListener("change", saveMetadataOptions);
 downloadMetadataTextInput.addEventListener("change", saveMetadataOptions);
