@@ -43,7 +43,7 @@ The **Current window only** option limits Run/Save tab operations to tabs in the
 
 ## Display settings
 
-Use the **Settings** tab to hide or show `.hint` helper text, hide or show `.warning` warnings, set a body background color with alpha, set a body background image file or URL, manipulate body background position/repeat/size/attachment, adjust input/textarea/select opacity, adjust the `.main` panel background opacity, and choose a Google Font with an in-page preview. These display settings are saved in extension storage and restored whenever the full-page or compact UI opens. Remote background images and Google Fonts are allowed by the extension content security policy. The UI uses Bootstrap 5 styles with extension-specific overrides layered on top.
+Use the **Settings** tab to hide or show `.hint` helper text, hide or show `.warning` warnings, hide or show `.field-help` helper text, set a body background color with alpha, set body text color, set a body background image file or URL, manipulate body background position/repeat/size/attachment, adjust input/textarea/select opacity, adjust the `.main` panel background color and opacity/alpha, and choose a Google Font with an in-page preview. These display settings are saved in extension storage and restored whenever the full-page or compact UI opens. Remote background images and Google Fonts are allowed by the extension content security policy. The UI uses Bootstrap 5 styles with extension-specific overrides layered on top.
 
 ## Tab/window sets
 

@@ -200,12 +200,13 @@ body {
 }
 
 .main {
-  background: rgba(255, 255, 255, var(--main-background-opacity, 1));
+  background: rgba(var(--main-background-color-rgb, 255, 255, 255), calc(var(--main-background-alpha, 1) * var(--main-background-opacity, 1)));
   border-radius: 0.5rem;
 }
 
 body.hide-hints .hint,
-body.hide-warnings .warning {
+body.hide-warnings .warning,
+body.hide-field-help .field-help {
   display: none;
 }
 

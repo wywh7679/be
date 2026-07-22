@@ -144,10 +144,16 @@
             <input id="show-warnings" class="form-check-input" type="checkbox" checked>
             Show warning text
           </label>
+          <label class="inline-option form-check">
+            <input id="show-field-help" class="form-check-input" type="checkbox" checked>
+            Show field help text
+          </label>
           <label for="body-background-color">Body background color</label>
           <input id="body-background-color" class="form-control form-control-color" type="color" value="#ffffff">
           <label for="body-background-alpha">Body background color alpha: <span id="body-background-alpha-value">100%</span></label>
           <input id="body-background-alpha" class="form-range" type="range" min="0" max="100" step="5" value="100">
+          <label for="body-text-color">Body text color</label>
+          <input id="body-text-color" class="form-control form-control-color" type="color" value="#000000">
           <label for="background-image-url">Body background image URL</label>
           <input id="background-image-url" class="form-control" type="url" placeholder="https://example.com/background.jpg">
           <label for="background-image-file">Or choose a body background image</label>
@@ -199,6 +205,10 @@
               </select>
             </div>
           </div>
+          <label for="main-background-color">Main background color</label>
+          <input id="main-background-color" class="form-control form-control-color" type="color" value="#ffffff">
+          <label for="main-background-alpha">Main background color alpha: <span id="main-background-alpha-value">100%</span></label>
+          <input id="main-background-alpha" class="form-range" type="range" min="0" max="100" step="5" value="100">
           <label for="google-font-select">Google font</label>
           <select id="google-font-select" class="form-select"></select>
           <p id="font-preview" class="font-preview">The selected font preview appears here.</p>
