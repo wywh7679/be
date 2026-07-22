@@ -6,8 +6,9 @@ A Firefox browser extension that opens as a full-page tool for running JavaScrip
 
 - `manifest.json` declares the Firefox WebExtension, toolbar button, background script, and permissions required to enumerate tabs, persist snippets/selectors/folders/previews, inject scripts, open extension tabs, and queue downloads.
 - `background.js` opens the full-page extension UI when the toolbar button is clicked.
-- `app.html`, `popup.css`, and `popup.js` provide the tabbed full-page UI for Run/Save, Tab/Window, and Profiles workflows, plus field profiles, saved tab/window sets, JavaScript execution, custom CSS injection, optional jQuery injection, current-window-only and domain-limited tab targeting, metadata EXIF writing for JPEG downloads, optional metadata sidecar files for selector downloads, download subfolder selection, document downloads, image previews, browser-window close/minimize/restore actions, and optional desktop-helper integration.
+- `app.html`, `vendor/bootstrap.min.css`, `popup.css`, and `popup.js` provide the tabbed full-page UI for Run/Save, Tab/Window, and Profiles workflows, plus field profiles, saved tab/window sets, JavaScript execution, custom CSS injection, optional jQuery injection, current-window-only and domain-limited tab targeting, metadata EXIF writing for JPEG downloads, optional metadata sidecar files for selector downloads, download subfolder selection, document downloads, image previews, browser-window close/minimize/restore actions, and optional desktop-helper integration.
 - `popup.html` remains available as a compact standalone version of the same UI.
+- `vendor/bootstrap.min.css` is the compiled Bootstrap 5.3.8 stylesheet used by the extension UI.
 - `vendor/jquery.min.js` is injected into compatible tabs before user code when the jQuery option is enabled and jQuery is not already loaded in the extension content-script context.
 - `vendor/piexif.js` is the MIT-licensed piexifjs library used to write selector metadata into downloaded JPEG EXIF when the option is enabled.
 - `preview.html`, `preview.css`, and `preview.js` render selected images as a four-column thumbnail gallery with multiselect controls, a clickable lightbox, slideshow controls, a preview-page subfolder field, and selected/all download buttons.
@@ -42,7 +43,7 @@ The **Current window only** option limits Run/Save tab operations to tabs in the
 
 ## Display settings
 
-Use the **Settings** tab to hide or show `.hint` helper text, hide or show `.warning` warnings, set a body background image file or URL, adjust the `.main` panel background opacity, and choose a Google Font with an in-page preview. These display settings are saved in extension storage and restored whenever the full-page or compact UI opens. Remote background images and Google Fonts are allowed by the extension content security policy.
+Use the **Settings** tab to hide or show `.hint` helper text, hide or show `.warning` warnings, set a body background color with alpha, set a body background image file or URL, manipulate body background position/repeat/size/attachment, adjust input/textarea/select opacity, adjust the `.main` panel background color and opacity/alpha, and choose a Google Font with an in-page preview. These display settings are saved in extension storage and restored whenever the full-page or compact UI opens. Remote background images and Google Fonts are allowed by the extension content security policy. The UI uses Bootstrap 5 styles with extension-specific overrides layered on top.
 
 ## Tab/window sets
 

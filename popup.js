@@ -38,10 +38,22 @@ const desktopHelperStatus = document.getElementById("desktop-helper-status");
 const desktopButtons = document.getElementById("desktop-buttons");
 const showHintsInput = document.getElementById("show-hints");
 const showWarningsInput = document.getElementById("show-warnings");
+const bodyBackgroundColorInput = document.getElementById("body-background-color");
+const bodyBackgroundAlphaInput = document.getElementById("body-background-alpha");
 const backgroundImageUrlInput = document.getElementById("background-image-url");
 const backgroundImageFileInput = document.getElementById("background-image-file");
 const mainBackgroundOpacityInput = document.getElementById("main-background-opacity");
+const formControlOpacityInput = document.getElementById("form-control-opacity");
+const backgroundPositionSelect = document.getElementById("background-position-select");
+const backgroundRepeatSelect = document.getElementById("background-repeat-select");
+const backgroundSizeSelect = document.getElementById("background-size-select");
+const backgroundAttachmentSelect = document.getElementById("background-attachment-select");
+const mainBackgroundColorInput = document.getElementById("main-background-color");
+const mainBackgroundAlphaInput = document.getElementById("main-background-alpha");
+const bodyBackgroundAlphaValue = document.getElementById("body-background-alpha-value");
 const mainBackgroundOpacityValue = document.getElementById("main-background-opacity-value");
+const formControlOpacityValue = document.getElementById("form-control-opacity-value");
+const mainBackgroundAlphaValue = document.getElementById("main-background-alpha-value");
 const googleFontSelect = document.getElementById("google-font-select");
 const fontPreview = document.getElementById("font-preview");
 const clearBackgroundImageButton = document.getElementById("clear-background-image");
@@ -63,8 +75,17 @@ const STORAGE_KEYS = {
   previewImages: "allTabsDocumentRunner.previewImages",
   showHints: "allTabsDocumentRunner.showHints",
   showWarnings: "allTabsDocumentRunner.showWarnings",
+  bodyBackgroundColor: "allTabsDocumentRunner.bodyBackgroundColor",
+  bodyBackgroundAlpha: "allTabsDocumentRunner.bodyBackgroundAlpha",
   backgroundImageUrl: "allTabsDocumentRunner.backgroundImageUrl",
   mainBackgroundOpacity: "allTabsDocumentRunner.mainBackgroundOpacity",
+  formControlOpacity: "allTabsDocumentRunner.formControlOpacity",
+  backgroundPosition: "allTabsDocumentRunner.backgroundPosition",
+  backgroundRepeat: "allTabsDocumentRunner.backgroundRepeat",
+  backgroundSize: "allTabsDocumentRunner.backgroundSize",
+  backgroundAttachment: "allTabsDocumentRunner.backgroundAttachment",
+  mainBackgroundColor: "allTabsDocumentRunner.mainBackgroundColor",
+  mainBackgroundAlpha: "allTabsDocumentRunner.mainBackgroundAlpha",
   googleFont: "allTabsDocumentRunner.googleFont"
 };
 
@@ -124,25 +145,64 @@ function sanitizeOpacity(value) {
   return Math.min(100, Math.max(0, parsed));
 }
 
+function sanitizeChoice(value, allowedValues, fallback) {
+  return allowedValues.includes(value) ? value : fallback;
+}
+
+function hexToRgbParts(value) {
+  const normalized = /^#[0-9a-f]{6}$/i.test(value) ? value : "#ffffff";
+  const intValue = parseInt(normalized.slice(1), 16);
+  return [intValue >> 16 & 255, intValue >> 8 & 255, intValue & 255].join(", ");
+}
+
 function applySettings(settings) {
   const showHints = settings.showHints !== false;
   const showWarnings = settings.showWarnings !== false;
+  const bodyBackgroundColor = /^#[0-9a-f]{6}$/i.test(settings.bodyBackgroundColor || "") ? settings.bodyBackgroundColor : "#ffffff";
+  const bodyBackgroundAlpha = sanitizeOpacity(settings.bodyBackgroundAlpha ?? 100);
   const backgroundImageUrl = String(settings.backgroundImageUrl || "").trim();
   const mainBackgroundOpacity = sanitizeOpacity(settings.mainBackgroundOpacity ?? 100);
+  const formControlOpacity = sanitizeOpacity(settings.formControlOpacity ?? 100);
+  const backgroundPosition = sanitizeChoice(settings.backgroundPosition, ["center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"], "center");
+  const backgroundRepeat = sanitizeChoice(settings.backgroundRepeat, ["no-repeat", "repeat", "repeat-x", "repeat-y"], "no-repeat");
+  const backgroundSize = sanitizeChoice(settings.backgroundSize, ["cover", "contain", "auto", "100% 100%"], "cover");
+  const backgroundAttachment = sanitizeChoice(settings.backgroundAttachment, ["scroll", "fixed", "local"], "scroll");
+  const mainBackgroundColor = /^#[0-9a-f]{6}$/i.test(settings.mainBackgroundColor || "") ? settings.mainBackgroundColor : "#ffffff";
+  const mainBackgroundAlpha = sanitizeOpacity(settings.mainBackgroundAlpha ?? 100);
   const googleFont = String(settings.googleFont || "");
 
   document.body.classList.toggle("hide-hints", !showHints);
   document.body.classList.toggle("hide-warnings", !showWarnings);
+  document.body.style.backgroundColor = `rgba(${hexToRgbParts(bodyBackgroundColor)}, ${bodyBackgroundAlpha / 100})`;
   document.body.style.backgroundImage = backgroundImageUrl ? `url("${backgroundImageUrl.replace(/["\\]/g, "\\$&")}")` : "";
+  document.body.style.backgroundPosition = backgroundPosition;
+  document.body.style.backgroundRepeat = backgroundRepeat;
+  document.body.style.backgroundSize = backgroundSize;
+  document.body.style.backgroundAttachment = backgroundAttachment;
   document.body.style.fontFamily = googleFont ? `"${googleFont}", system-ui, sans-serif` : "";
   document.documentElement.style.setProperty("--main-background-opacity", String(mainBackgroundOpacity / 100));
+  document.documentElement.style.setProperty("--form-control-opacity", String(formControlOpacity / 100));
+  document.documentElement.style.setProperty("--main-background-color-rgb", hexToRgbParts(mainBackgroundColor));
+  document.documentElement.style.setProperty("--main-background-alpha", String(mainBackgroundAlpha / 100));
   ensureGoogleFont(googleFont);
 
   showHintsInput.checked = showHints;
   showWarningsInput.checked = showWarnings;
+  bodyBackgroundColorInput.value = bodyBackgroundColor;
+  bodyBackgroundAlphaInput.value = String(bodyBackgroundAlpha);
+  bodyBackgroundAlphaValue.textContent = `${bodyBackgroundAlpha}%`;
   backgroundImageUrlInput.value = backgroundImageUrl;
   mainBackgroundOpacityInput.value = String(mainBackgroundOpacity);
   mainBackgroundOpacityValue.textContent = `${mainBackgroundOpacity}%`;
+  formControlOpacityInput.value = String(formControlOpacity);
+  formControlOpacityValue.textContent = `${formControlOpacity}%`;
+  backgroundPositionSelect.value = backgroundPosition;
+  backgroundRepeatSelect.value = backgroundRepeat;
+  backgroundSizeSelect.value = backgroundSize;
+  backgroundAttachmentSelect.value = backgroundAttachment;
+  mainBackgroundColorInput.value = mainBackgroundColor;
+  mainBackgroundAlphaInput.value = String(mainBackgroundAlpha);
+  mainBackgroundAlphaValue.textContent = `${mainBackgroundAlpha}%`;
   googleFontSelect.value = googleFont;
   fontPreview.style.fontFamily = googleFont ? `"${googleFont}", system-ui, sans-serif` : "";
 }
@@ -151,8 +211,17 @@ function currentSettingsValues() {
   return {
     showHints: showHintsInput.checked,
     showWarnings: showWarningsInput.checked,
+    bodyBackgroundColor: bodyBackgroundColorInput.value,
+    bodyBackgroundAlpha: sanitizeOpacity(bodyBackgroundAlphaInput.value),
     backgroundImageUrl: backgroundImageUrlInput.value.trim(),
     mainBackgroundOpacity: sanitizeOpacity(mainBackgroundOpacityInput.value),
+    formControlOpacity: sanitizeOpacity(formControlOpacityInput.value),
+    backgroundPosition: backgroundPositionSelect.value,
+    backgroundRepeat: backgroundRepeatSelect.value,
+    backgroundSize: backgroundSizeSelect.value,
+    backgroundAttachment: backgroundAttachmentSelect.value,
+    mainBackgroundColor: mainBackgroundColorInput.value,
+    mainBackgroundAlpha: sanitizeOpacity(mainBackgroundAlphaInput.value),
     googleFont: googleFontSelect.value
   };
 }
@@ -184,8 +253,17 @@ async function saveSettings() {
   await browser.storage.local.set({
     [STORAGE_KEYS.showHints]: settings.showHints,
     [STORAGE_KEYS.showWarnings]: settings.showWarnings,
+    [STORAGE_KEYS.bodyBackgroundColor]: settings.bodyBackgroundColor,
+    [STORAGE_KEYS.bodyBackgroundAlpha]: settings.bodyBackgroundAlpha,
     [STORAGE_KEYS.backgroundImageUrl]: settings.backgroundImageUrl,
     [STORAGE_KEYS.mainBackgroundOpacity]: settings.mainBackgroundOpacity,
+    [STORAGE_KEYS.formControlOpacity]: settings.formControlOpacity,
+    [STORAGE_KEYS.backgroundPosition]: settings.backgroundPosition,
+    [STORAGE_KEYS.backgroundRepeat]: settings.backgroundRepeat,
+    [STORAGE_KEYS.backgroundSize]: settings.backgroundSize,
+    [STORAGE_KEYS.backgroundAttachment]: settings.backgroundAttachment,
+    [STORAGE_KEYS.mainBackgroundColor]: settings.mainBackgroundColor,
+    [STORAGE_KEYS.mainBackgroundAlpha]: settings.mainBackgroundAlpha,
     [STORAGE_KEYS.googleFont]: settings.googleFont
   });
 }
@@ -195,8 +273,17 @@ async function resetSettings() {
   await browser.storage.local.remove([
     STORAGE_KEYS.showHints,
     STORAGE_KEYS.showWarnings,
+    STORAGE_KEYS.bodyBackgroundColor,
+    STORAGE_KEYS.bodyBackgroundAlpha,
     STORAGE_KEYS.backgroundImageUrl,
     STORAGE_KEYS.mainBackgroundOpacity,
+    STORAGE_KEYS.formControlOpacity,
+    STORAGE_KEYS.backgroundPosition,
+    STORAGE_KEYS.backgroundRepeat,
+    STORAGE_KEYS.backgroundSize,
+    STORAGE_KEYS.backgroundAttachment,
+    STORAGE_KEYS.mainBackgroundColor,
+    STORAGE_KEYS.mainBackgroundAlpha,
     STORAGE_KEYS.googleFont
   ]);
   setStatus("Reset extension display settings.");
@@ -508,9 +595,18 @@ function setBusy(isBusy) {
   refreshDesktopHelperButton.disabled = isBusy;
   showHintsInput.disabled = isBusy;
   showWarningsInput.disabled = isBusy;
+  bodyBackgroundColorInput.disabled = isBusy;
+  bodyBackgroundAlphaInput.disabled = isBusy;
   backgroundImageUrlInput.disabled = isBusy;
   backgroundImageFileInput.disabled = isBusy;
   mainBackgroundOpacityInput.disabled = isBusy;
+  formControlOpacityInput.disabled = isBusy;
+  backgroundPositionSelect.disabled = isBusy;
+  backgroundRepeatSelect.disabled = isBusy;
+  backgroundSizeSelect.disabled = isBusy;
+  backgroundAttachmentSelect.disabled = isBusy;
+  mainBackgroundColorInput.disabled = isBusy;
+  mainBackgroundAlphaInput.disabled = isBusy;
   googleFontSelect.disabled = isBusy;
   clearBackgroundImageButton.disabled = isBusy;
   resetSettingsButton.disabled = isBusy;
@@ -684,8 +780,17 @@ async function restoreSavedValues() {
   applySettings({
     showHints: savedValues[STORAGE_KEYS.showHints],
     showWarnings: savedValues[STORAGE_KEYS.showWarnings],
+    bodyBackgroundColor: savedValues[STORAGE_KEYS.bodyBackgroundColor],
+    bodyBackgroundAlpha: savedValues[STORAGE_KEYS.bodyBackgroundAlpha],
     backgroundImageUrl: savedValues[STORAGE_KEYS.backgroundImageUrl],
     mainBackgroundOpacity: savedValues[STORAGE_KEYS.mainBackgroundOpacity],
+    formControlOpacity: savedValues[STORAGE_KEYS.formControlOpacity],
+    backgroundPosition: savedValues[STORAGE_KEYS.backgroundPosition],
+    backgroundRepeat: savedValues[STORAGE_KEYS.backgroundRepeat],
+    backgroundSize: savedValues[STORAGE_KEYS.backgroundSize],
+    backgroundAttachment: savedValues[STORAGE_KEYS.backgroundAttachment],
+    mainBackgroundColor: savedValues[STORAGE_KEYS.mainBackgroundColor],
+    mainBackgroundAlpha: savedValues[STORAGE_KEYS.mainBackgroundAlpha],
     googleFont: savedValues[STORAGE_KEYS.googleFont]
   });
   renderProfiles(savedValues[STORAGE_KEYS.profiles] || {});
@@ -1344,9 +1449,18 @@ writeMetadataExifInput.addEventListener("change", saveMetadataOptions);
 downloadMetadataTextInput.addEventListener("change", saveMetadataOptions);
 showHintsInput.addEventListener("change", saveSettings);
 showWarningsInput.addEventListener("change", saveSettings);
+bodyBackgroundColorInput.addEventListener("input", saveSettings);
+bodyBackgroundAlphaInput.addEventListener("input", saveSettings);
 backgroundImageUrlInput.addEventListener("change", saveSettings);
 backgroundImageFileInput.addEventListener("change", saveBackgroundImageFile);
 mainBackgroundOpacityInput.addEventListener("input", saveSettings);
+formControlOpacityInput.addEventListener("input", saveSettings);
+backgroundPositionSelect.addEventListener("change", saveSettings);
+backgroundRepeatSelect.addEventListener("change", saveSettings);
+backgroundSizeSelect.addEventListener("change", saveSettings);
+backgroundAttachmentSelect.addEventListener("change", saveSettings);
+mainBackgroundColorInput.addEventListener("input", saveSettings);
+mainBackgroundAlphaInput.addEventListener("input", saveSettings);
 googleFontSelect.addEventListener("change", saveSettings);
 clearBackgroundImageButton.addEventListener("click", async () => {
   backgroundImageUrlInput.value = "";
