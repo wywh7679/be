@@ -48,12 +48,9 @@ const backgroundPositionSelect = document.getElementById("background-position-se
 const backgroundRepeatSelect = document.getElementById("background-repeat-select");
 const backgroundSizeSelect = document.getElementById("background-size-select");
 const backgroundAttachmentSelect = document.getElementById("background-attachment-select");
-const mainBackgroundColorInput = document.getElementById("main-background-color");
-const mainBackgroundAlphaInput = document.getElementById("main-background-alpha");
 const bodyBackgroundAlphaValue = document.getElementById("body-background-alpha-value");
 const mainBackgroundOpacityValue = document.getElementById("main-background-opacity-value");
 const formControlOpacityValue = document.getElementById("form-control-opacity-value");
-const mainBackgroundAlphaValue = document.getElementById("main-background-alpha-value");
 const googleFontSelect = document.getElementById("google-font-select");
 const fontPreview = document.getElementById("font-preview");
 const clearBackgroundImageButton = document.getElementById("clear-background-image");
@@ -84,8 +81,6 @@ const STORAGE_KEYS = {
   backgroundRepeat: "allTabsDocumentRunner.backgroundRepeat",
   backgroundSize: "allTabsDocumentRunner.backgroundSize",
   backgroundAttachment: "allTabsDocumentRunner.backgroundAttachment",
-  mainBackgroundColor: "allTabsDocumentRunner.mainBackgroundColor",
-  mainBackgroundAlpha: "allTabsDocumentRunner.mainBackgroundAlpha",
   googleFont: "allTabsDocumentRunner.googleFont"
 };
 
@@ -167,8 +162,6 @@ function applySettings(settings) {
   const backgroundRepeat = sanitizeChoice(settings.backgroundRepeat, ["no-repeat", "repeat", "repeat-x", "repeat-y"], "no-repeat");
   const backgroundSize = sanitizeChoice(settings.backgroundSize, ["cover", "contain", "auto", "100% 100%"], "cover");
   const backgroundAttachment = sanitizeChoice(settings.backgroundAttachment, ["scroll", "fixed", "local"], "scroll");
-  const mainBackgroundColor = /^#[0-9a-f]{6}$/i.test(settings.mainBackgroundColor || "") ? settings.mainBackgroundColor : "#ffffff";
-  const mainBackgroundAlpha = sanitizeOpacity(settings.mainBackgroundAlpha ?? 100);
   const googleFont = String(settings.googleFont || "");
 
   document.body.classList.toggle("hide-hints", !showHints);
@@ -182,8 +175,6 @@ function applySettings(settings) {
   document.body.style.fontFamily = googleFont ? `"${googleFont}", system-ui, sans-serif` : "";
   document.documentElement.style.setProperty("--main-background-opacity", String(mainBackgroundOpacity / 100));
   document.documentElement.style.setProperty("--form-control-opacity", String(formControlOpacity / 100));
-  document.documentElement.style.setProperty("--main-background-color-rgb", hexToRgbParts(mainBackgroundColor));
-  document.documentElement.style.setProperty("--main-background-alpha", String(mainBackgroundAlpha / 100));
   ensureGoogleFont(googleFont);
 
   showHintsInput.checked = showHints;
@@ -200,9 +191,6 @@ function applySettings(settings) {
   backgroundRepeatSelect.value = backgroundRepeat;
   backgroundSizeSelect.value = backgroundSize;
   backgroundAttachmentSelect.value = backgroundAttachment;
-  mainBackgroundColorInput.value = mainBackgroundColor;
-  mainBackgroundAlphaInput.value = String(mainBackgroundAlpha);
-  mainBackgroundAlphaValue.textContent = `${mainBackgroundAlpha}%`;
   googleFontSelect.value = googleFont;
   fontPreview.style.fontFamily = googleFont ? `"${googleFont}", system-ui, sans-serif` : "";
 }
@@ -220,8 +208,6 @@ function currentSettingsValues() {
     backgroundRepeat: backgroundRepeatSelect.value,
     backgroundSize: backgroundSizeSelect.value,
     backgroundAttachment: backgroundAttachmentSelect.value,
-    mainBackgroundColor: mainBackgroundColorInput.value,
-    mainBackgroundAlpha: sanitizeOpacity(mainBackgroundAlphaInput.value),
     googleFont: googleFontSelect.value
   };
 }
@@ -262,8 +248,6 @@ async function saveSettings() {
     [STORAGE_KEYS.backgroundRepeat]: settings.backgroundRepeat,
     [STORAGE_KEYS.backgroundSize]: settings.backgroundSize,
     [STORAGE_KEYS.backgroundAttachment]: settings.backgroundAttachment,
-    [STORAGE_KEYS.mainBackgroundColor]: settings.mainBackgroundColor,
-    [STORAGE_KEYS.mainBackgroundAlpha]: settings.mainBackgroundAlpha,
     [STORAGE_KEYS.googleFont]: settings.googleFont
   });
 }
@@ -282,8 +266,6 @@ async function resetSettings() {
     STORAGE_KEYS.backgroundRepeat,
     STORAGE_KEYS.backgroundSize,
     STORAGE_KEYS.backgroundAttachment,
-    STORAGE_KEYS.mainBackgroundColor,
-    STORAGE_KEYS.mainBackgroundAlpha,
     STORAGE_KEYS.googleFont
   ]);
   setStatus("Reset extension display settings.");
@@ -605,8 +587,6 @@ function setBusy(isBusy) {
   backgroundRepeatSelect.disabled = isBusy;
   backgroundSizeSelect.disabled = isBusy;
   backgroundAttachmentSelect.disabled = isBusy;
-  mainBackgroundColorInput.disabled = isBusy;
-  mainBackgroundAlphaInput.disabled = isBusy;
   googleFontSelect.disabled = isBusy;
   clearBackgroundImageButton.disabled = isBusy;
   resetSettingsButton.disabled = isBusy;
@@ -789,8 +769,6 @@ async function restoreSavedValues() {
     backgroundRepeat: savedValues[STORAGE_KEYS.backgroundRepeat],
     backgroundSize: savedValues[STORAGE_KEYS.backgroundSize],
     backgroundAttachment: savedValues[STORAGE_KEYS.backgroundAttachment],
-    mainBackgroundColor: savedValues[STORAGE_KEYS.mainBackgroundColor],
-    mainBackgroundAlpha: savedValues[STORAGE_KEYS.mainBackgroundAlpha],
     googleFont: savedValues[STORAGE_KEYS.googleFont]
   });
   renderProfiles(savedValues[STORAGE_KEYS.profiles] || {});
@@ -1459,8 +1437,6 @@ backgroundPositionSelect.addEventListener("change", saveSettings);
 backgroundRepeatSelect.addEventListener("change", saveSettings);
 backgroundSizeSelect.addEventListener("change", saveSettings);
 backgroundAttachmentSelect.addEventListener("change", saveSettings);
-mainBackgroundColorInput.addEventListener("input", saveSettings);
-mainBackgroundAlphaInput.addEventListener("input", saveSettings);
 googleFontSelect.addEventListener("change", saveSettings);
 clearBackgroundImageButton.addEventListener("click", async () => {
   backgroundImageUrlInput.value = "";
