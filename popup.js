@@ -5,6 +5,7 @@ const customCssInput = document.getElementById("custom-css");
 const writeMetadataExifInput = document.getElementById("write-metadata-exif");
 const downloadMetadataTextInput = document.getElementById("download-metadata-text");
 const ensureJQueryInput = document.getElementById("ensure-jquery");
+const currentWindowOnlyInput = document.getElementById("current-window-only");
 const domainFilterInput = document.getElementById("domain-filter");
 const profileNameInput = document.getElementById("profile-name");
 const profileSelect = document.getElementById("profile-select");
@@ -35,6 +36,30 @@ const closeOtherWindowsTabsButton = document.getElementById("close-other-windows
 const refreshDesktopHelperButton = document.getElementById("refresh-desktop-helper");
 const desktopHelperStatus = document.getElementById("desktop-helper-status");
 const desktopButtons = document.getElementById("desktop-buttons");
+const showHintsInput = document.getElementById("show-hints");
+const showWarningsInput = document.getElementById("show-warnings");
+const showFieldHelpInput = document.getElementById("show-field-help");
+const bodyBackgroundColorInput = document.getElementById("body-background-color");
+const bodyBackgroundAlphaInput = document.getElementById("body-background-alpha");
+const bodyTextColorInput = document.getElementById("body-text-color");
+const backgroundImageUrlInput = document.getElementById("background-image-url");
+const backgroundImageFileInput = document.getElementById("background-image-file");
+const mainBackgroundOpacityInput = document.getElementById("main-background-opacity");
+const formControlOpacityInput = document.getElementById("form-control-opacity");
+const backgroundPositionSelect = document.getElementById("background-position-select");
+const backgroundRepeatSelect = document.getElementById("background-repeat-select");
+const backgroundSizeSelect = document.getElementById("background-size-select");
+const backgroundAttachmentSelect = document.getElementById("background-attachment-select");
+const mainBackgroundColorInput = document.getElementById("main-background-color");
+const mainBackgroundAlphaInput = document.getElementById("main-background-alpha");
+const bodyBackgroundAlphaValue = document.getElementById("body-background-alpha-value");
+const mainBackgroundOpacityValue = document.getElementById("main-background-opacity-value");
+const formControlOpacityValue = document.getElementById("form-control-opacity-value");
+const mainBackgroundAlphaValue = document.getElementById("main-background-alpha-value");
+const googleFontSelect = document.getElementById("google-font-select");
+const fontPreview = document.getElementById("font-preview");
+const clearBackgroundImageButton = document.getElementById("clear-background-image");
+const resetSettingsButton = document.getElementById("reset-settings");
 
 const STORAGE_KEYS = {
   code: "allTabsDocumentRunner.code",
@@ -45,14 +70,240 @@ const STORAGE_KEYS = {
   downloadMetadataText: "allTabsDocumentRunner.downloadMetadataText",
   downloadFolder: "allTabsDocumentRunner.downloadFolder",
   ensureJQuery: "allTabsDocumentRunner.ensureJQuery",
+  currentWindowOnly: "allTabsDocumentRunner.currentWindowOnly",
   domainFilter: "allTabsDocumentRunner.domainFilter",
   profiles: "allTabsDocumentRunner.profiles",
   tabSets: "allTabsDocumentRunner.tabSets",
-  previewImages: "allTabsDocumentRunner.previewImages"
+  previewImages: "allTabsDocumentRunner.previewImages",
+  showHints: "allTabsDocumentRunner.showHints",
+  showWarnings: "allTabsDocumentRunner.showWarnings",
+  showFieldHelp: "allTabsDocumentRunner.showFieldHelp",
+  bodyBackgroundColor: "allTabsDocumentRunner.bodyBackgroundColor",
+  bodyBackgroundAlpha: "allTabsDocumentRunner.bodyBackgroundAlpha",
+  bodyTextColor: "allTabsDocumentRunner.bodyTextColor",
+  backgroundImageUrl: "allTabsDocumentRunner.backgroundImageUrl",
+  mainBackgroundOpacity: "allTabsDocumentRunner.mainBackgroundOpacity",
+  formControlOpacity: "allTabsDocumentRunner.formControlOpacity",
+  backgroundPosition: "allTabsDocumentRunner.backgroundPosition",
+  backgroundRepeat: "allTabsDocumentRunner.backgroundRepeat",
+  backgroundSize: "allTabsDocumentRunner.backgroundSize",
+  backgroundAttachment: "allTabsDocumentRunner.backgroundAttachment",
+  mainBackgroundColor: "allTabsDocumentRunner.mainBackgroundColor",
+  mainBackgroundAlpha: "allTabsDocumentRunner.mainBackgroundAlpha",
+  googleFont: "allTabsDocumentRunner.googleFont"
 };
+
+const GOOGLE_FONTS = [
+  { label: "Default system font", value: "" },
+  { label: "Inter", value: "Inter" },
+  { label: "Roboto", value: "Roboto" },
+  { label: "Open Sans", value: "Open Sans" },
+  { label: "Lato", value: "Lato" },
+  { label: "Montserrat", value: "Montserrat" },
+  { label: "Poppins", value: "Poppins" },
+  { label: "Merriweather", value: "Merriweather" },
+  { label: "Playfair Display", value: "Playfair Display" },
+  { label: "Source Sans 3", value: "Source Sans 3" },
+  { label: "Nunito", value: "Nunito" }
+];
 
 const DOCUMENT_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif", ".bmp", ".tif", ".tiff"];
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif", ".bmp", ".tif", ".tiff"];
+
+function renderGoogleFontOptions() {
+  googleFontSelect.textContent = "";
+
+  for (const font of GOOGLE_FONTS) {
+    const option = document.createElement("option");
+    option.value = font.value;
+    option.textContent = font.label;
+    googleFontSelect.append(option);
+  }
+}
+
+function googleFontUrl(fontName) {
+  return `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName).replace(/%20/g, "+")}:wght@400;600;700&display=swap`;
+}
+
+function ensureGoogleFont(fontName) {
+  document.getElementById("selected-google-font")?.remove();
+
+  if (!fontName) {
+    return;
+  }
+
+  const link = document.createElement("link");
+  link.id = "selected-google-font";
+  link.rel = "stylesheet";
+  link.href = googleFontUrl(fontName);
+  document.head.append(link);
+}
+
+function sanitizeOpacity(value) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return 100;
+  }
+
+  return Math.min(100, Math.max(0, parsed));
+}
+
+function sanitizeChoice(value, allowedValues, fallback) {
+  return allowedValues.includes(value) ? value : fallback;
+}
+
+function hexToRgbParts(value) {
+  const normalized = /^#[0-9a-f]{6}$/i.test(value) ? value : "#ffffff";
+  const intValue = parseInt(normalized.slice(1), 16);
+  return [intValue >> 16 & 255, intValue >> 8 & 255, intValue & 255].join(", ");
+}
+
+function applySettings(settings) {
+  const showHints = settings.showHints !== false;
+  const showWarnings = settings.showWarnings !== false;
+  const showFieldHelp = settings.showFieldHelp !== false;
+  const bodyBackgroundColor = /^#[0-9a-f]{6}$/i.test(settings.bodyBackgroundColor || "") ? settings.bodyBackgroundColor : "#ffffff";
+  const bodyBackgroundAlpha = sanitizeOpacity(settings.bodyBackgroundAlpha ?? 100);
+  const bodyTextColor = /^#[0-9a-f]{6}$/i.test(settings.bodyTextColor || "") ? settings.bodyTextColor : "#000000";
+  const backgroundImageUrl = String(settings.backgroundImageUrl || "").trim();
+  const mainBackgroundOpacity = sanitizeOpacity(settings.mainBackgroundOpacity ?? 100);
+  const formControlOpacity = sanitizeOpacity(settings.formControlOpacity ?? 100);
+  const backgroundPosition = sanitizeChoice(settings.backgroundPosition, ["center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"], "center");
+  const backgroundRepeat = sanitizeChoice(settings.backgroundRepeat, ["no-repeat", "repeat", "repeat-x", "repeat-y"], "no-repeat");
+  const backgroundSize = sanitizeChoice(settings.backgroundSize, ["cover", "contain", "auto", "100% 100%"], "cover");
+  const backgroundAttachment = sanitizeChoice(settings.backgroundAttachment, ["scroll", "fixed", "local"], "scroll");
+  const mainBackgroundColor = /^#[0-9a-f]{6}$/i.test(settings.mainBackgroundColor || "") ? settings.mainBackgroundColor : "#ffffff";
+  const mainBackgroundAlpha = sanitizeOpacity(settings.mainBackgroundAlpha ?? 100);
+  const googleFont = String(settings.googleFont || "");
+
+  document.body.classList.toggle("hide-hints", !showHints);
+  document.body.classList.toggle("hide-warnings", !showWarnings);
+  document.body.classList.toggle("hide-field-help", !showFieldHelp);
+  document.body.style.backgroundColor = `rgba(${hexToRgbParts(bodyBackgroundColor)}, ${bodyBackgroundAlpha / 100})`;
+  document.body.style.color = bodyTextColor;
+  document.body.style.backgroundImage = backgroundImageUrl ? `url("${backgroundImageUrl.replace(/["\\]/g, "\\$&")}")` : "";
+  document.body.style.backgroundPosition = backgroundPosition;
+  document.body.style.backgroundRepeat = backgroundRepeat;
+  document.body.style.backgroundSize = backgroundSize;
+  document.body.style.backgroundAttachment = backgroundAttachment;
+  document.body.style.fontFamily = googleFont ? `"${googleFont}", system-ui, sans-serif` : "";
+  document.documentElement.style.setProperty("--main-background-opacity", String(mainBackgroundOpacity / 100));
+  document.documentElement.style.setProperty("--form-control-opacity", String(formControlOpacity / 100));
+  document.documentElement.style.setProperty("--main-background-color-rgb", hexToRgbParts(mainBackgroundColor));
+  document.documentElement.style.setProperty("--main-background-alpha", String(mainBackgroundAlpha / 100));
+  ensureGoogleFont(googleFont);
+
+  showHintsInput.checked = showHints;
+  showWarningsInput.checked = showWarnings;
+  showFieldHelpInput.checked = showFieldHelp;
+  bodyBackgroundColorInput.value = bodyBackgroundColor;
+  bodyBackgroundAlphaInput.value = String(bodyBackgroundAlpha);
+  bodyBackgroundAlphaValue.textContent = `${bodyBackgroundAlpha}%`;
+  bodyTextColorInput.value = bodyTextColor;
+  backgroundImageUrlInput.value = backgroundImageUrl;
+  mainBackgroundOpacityInput.value = String(mainBackgroundOpacity);
+  mainBackgroundOpacityValue.textContent = `${mainBackgroundOpacity}%`;
+  formControlOpacityInput.value = String(formControlOpacity);
+  formControlOpacityValue.textContent = `${formControlOpacity}%`;
+  backgroundPositionSelect.value = backgroundPosition;
+  backgroundRepeatSelect.value = backgroundRepeat;
+  backgroundSizeSelect.value = backgroundSize;
+  backgroundAttachmentSelect.value = backgroundAttachment;
+  mainBackgroundColorInput.value = mainBackgroundColor;
+  mainBackgroundAlphaInput.value = String(mainBackgroundAlpha);
+  mainBackgroundAlphaValue.textContent = `${mainBackgroundAlpha}%`;
+  googleFontSelect.value = googleFont;
+  fontPreview.style.fontFamily = googleFont ? `"${googleFont}", system-ui, sans-serif` : "";
+}
+
+function currentSettingsValues() {
+  return {
+    showHints: showHintsInput.checked,
+    showWarnings: showWarningsInput.checked,
+    showFieldHelp: showFieldHelpInput.checked,
+    bodyBackgroundColor: bodyBackgroundColorInput.value,
+    bodyBackgroundAlpha: sanitizeOpacity(bodyBackgroundAlphaInput.value),
+    bodyTextColor: bodyTextColorInput.value,
+    backgroundImageUrl: backgroundImageUrlInput.value.trim(),
+    mainBackgroundOpacity: sanitizeOpacity(mainBackgroundOpacityInput.value),
+    formControlOpacity: sanitizeOpacity(formControlOpacityInput.value),
+    backgroundPosition: backgroundPositionSelect.value,
+    backgroundRepeat: backgroundRepeatSelect.value,
+    backgroundSize: backgroundSizeSelect.value,
+    backgroundAttachment: backgroundAttachmentSelect.value,
+    mainBackgroundColor: mainBackgroundColorInput.value,
+    mainBackgroundAlpha: sanitizeOpacity(mainBackgroundAlphaInput.value),
+    googleFont: googleFontSelect.value
+  };
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(reader.error || new Error("Failed to read background image.")));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveBackgroundImageFile() {
+  const [file] = backgroundImageFileInput.files || [];
+
+  if (!file) {
+    return;
+  }
+
+  backgroundImageUrlInput.value = await fileToDataUrl(file);
+  await saveSettings();
+  setStatus("Saved extension background image.");
+}
+
+async function saveSettings() {
+  const settings = currentSettingsValues();
+  applySettings(settings);
+  await browser.storage.local.set({
+    [STORAGE_KEYS.showHints]: settings.showHints,
+    [STORAGE_KEYS.showWarnings]: settings.showWarnings,
+    [STORAGE_KEYS.showFieldHelp]: settings.showFieldHelp,
+    [STORAGE_KEYS.bodyBackgroundColor]: settings.bodyBackgroundColor,
+    [STORAGE_KEYS.bodyBackgroundAlpha]: settings.bodyBackgroundAlpha,
+    [STORAGE_KEYS.bodyTextColor]: settings.bodyTextColor,
+    [STORAGE_KEYS.backgroundImageUrl]: settings.backgroundImageUrl,
+    [STORAGE_KEYS.mainBackgroundOpacity]: settings.mainBackgroundOpacity,
+    [STORAGE_KEYS.formControlOpacity]: settings.formControlOpacity,
+    [STORAGE_KEYS.backgroundPosition]: settings.backgroundPosition,
+    [STORAGE_KEYS.backgroundRepeat]: settings.backgroundRepeat,
+    [STORAGE_KEYS.backgroundSize]: settings.backgroundSize,
+    [STORAGE_KEYS.backgroundAttachment]: settings.backgroundAttachment,
+    [STORAGE_KEYS.mainBackgroundColor]: settings.mainBackgroundColor,
+    [STORAGE_KEYS.mainBackgroundAlpha]: settings.mainBackgroundAlpha,
+    [STORAGE_KEYS.googleFont]: settings.googleFont
+  });
+}
+
+async function resetSettings() {
+  applySettings({});
+  await browser.storage.local.remove([
+    STORAGE_KEYS.showHints,
+    STORAGE_KEYS.showWarnings,
+    STORAGE_KEYS.showFieldHelp,
+    STORAGE_KEYS.bodyBackgroundColor,
+    STORAGE_KEYS.bodyBackgroundAlpha,
+    STORAGE_KEYS.bodyTextColor,
+    STORAGE_KEYS.backgroundImageUrl,
+    STORAGE_KEYS.mainBackgroundOpacity,
+    STORAGE_KEYS.formControlOpacity,
+    STORAGE_KEYS.backgroundPosition,
+    STORAGE_KEYS.backgroundRepeat,
+    STORAGE_KEYS.backgroundSize,
+    STORAGE_KEYS.backgroundAttachment,
+    STORAGE_KEYS.mainBackgroundColor,
+    STORAGE_KEYS.mainBackgroundAlpha,
+    STORAGE_KEYS.googleFont
+  ]);
+  setStatus("Reset extension display settings.");
+}
 
 function setStatus(message) {
   statusOutput.textContent = message;
@@ -129,8 +380,24 @@ function tabMatchesDomain(tab, domain) {
 async function queryScopedTabs() {
   const domain = normalizeDomainFilter(domainFilterInput.value);
   domainFilterInput.value = domain;
-  const tabs = await browser.tabs.query({});
+  const queryInfo = currentWindowOnlyInput.checked ? { currentWindow: true } : {};
+  const tabs = await browser.tabs.query(queryInfo);
   return tabs.filter((tab) => tabMatchesDomain(tab, domain));
+}
+
+function describeScope() {
+  const domain = normalizeDomainFilter(domainFilterInput.value);
+  const scopeParts = [];
+
+  if (currentWindowOnlyInput.checked) {
+    scopeParts.push(" in the current window");
+  }
+
+  if (domain) {
+    scopeParts.push(` matching ${domain}`);
+  }
+
+  return scopeParts.join("");
 }
 
 function sanitizeFolder(folder) {
@@ -329,6 +596,7 @@ function setBusy(isBusy) {
   injectCssButton.disabled = isBusy;
   clearCssButton.disabled = isBusy;
   writeMetadataExifInput.disabled = isBusy;
+  currentWindowOnlyInput.disabled = isBusy;
   downloadMetadataTextInput.disabled = isBusy;
   clearFolderButton.disabled = isBusy;
   saveProfileButton.disabled = isBusy;
@@ -341,6 +609,25 @@ function setBusy(isBusy) {
   restoreMinimizedWindowsButton.disabled = isBusy;
   closeOtherWindowsTabsButton.disabled = isBusy;
   refreshDesktopHelperButton.disabled = isBusy;
+  showHintsInput.disabled = isBusy;
+  showWarningsInput.disabled = isBusy;
+  showFieldHelpInput.disabled = isBusy;
+  bodyBackgroundColorInput.disabled = isBusy;
+  bodyBackgroundAlphaInput.disabled = isBusy;
+  bodyTextColorInput.disabled = isBusy;
+  backgroundImageUrlInput.disabled = isBusy;
+  backgroundImageFileInput.disabled = isBusy;
+  mainBackgroundOpacityInput.disabled = isBusy;
+  formControlOpacityInput.disabled = isBusy;
+  backgroundPositionSelect.disabled = isBusy;
+  backgroundRepeatSelect.disabled = isBusy;
+  backgroundSizeSelect.disabled = isBusy;
+  backgroundAttachmentSelect.disabled = isBusy;
+  mainBackgroundColorInput.disabled = isBusy;
+  mainBackgroundAlphaInput.disabled = isBusy;
+  googleFontSelect.disabled = isBusy;
+  clearBackgroundImageButton.disabled = isBusy;
+  resetSettingsButton.disabled = isBusy;
   downloadOpenDocumentsButton.disabled = isBusy;
   downloadSelectorDocumentsButton.disabled = isBusy;
   previewSelectorImagesButton.disabled = isBusy;
@@ -506,7 +793,26 @@ async function restoreSavedValues() {
   downloadMetadataTextInput.checked = savedValues[STORAGE_KEYS.downloadMetadataText] !== false;
   downloadFolderInput.value = savedValues[STORAGE_KEYS.downloadFolder] || "";
   domainFilterInput.value = savedValues[STORAGE_KEYS.domainFilter] || "";
+  currentWindowOnlyInput.checked = savedValues[STORAGE_KEYS.currentWindowOnly] === true;
   ensureJQueryInput.checked = savedValues[STORAGE_KEYS.ensureJQuery] !== false;
+  applySettings({
+    showHints: savedValues[STORAGE_KEYS.showHints],
+    showWarnings: savedValues[STORAGE_KEYS.showWarnings],
+    showFieldHelp: savedValues[STORAGE_KEYS.showFieldHelp],
+    bodyBackgroundColor: savedValues[STORAGE_KEYS.bodyBackgroundColor],
+    bodyBackgroundAlpha: savedValues[STORAGE_KEYS.bodyBackgroundAlpha],
+    bodyTextColor: savedValues[STORAGE_KEYS.bodyTextColor],
+    backgroundImageUrl: savedValues[STORAGE_KEYS.backgroundImageUrl],
+    mainBackgroundOpacity: savedValues[STORAGE_KEYS.mainBackgroundOpacity],
+    formControlOpacity: savedValues[STORAGE_KEYS.formControlOpacity],
+    backgroundPosition: savedValues[STORAGE_KEYS.backgroundPosition],
+    backgroundRepeat: savedValues[STORAGE_KEYS.backgroundRepeat],
+    backgroundSize: savedValues[STORAGE_KEYS.backgroundSize],
+    backgroundAttachment: savedValues[STORAGE_KEYS.backgroundAttachment],
+    mainBackgroundColor: savedValues[STORAGE_KEYS.mainBackgroundColor],
+    mainBackgroundAlpha: savedValues[STORAGE_KEYS.mainBackgroundAlpha],
+    googleFont: savedValues[STORAGE_KEYS.googleFont]
+  });
   renderProfiles(savedValues[STORAGE_KEYS.profiles] || {});
   renderTabSets(savedValues[STORAGE_KEYS.tabSets] || {});
 }
@@ -546,6 +852,10 @@ async function saveDomainFilter() {
   await browser.storage.local.set({ [STORAGE_KEYS.domainFilter]: domain });
 }
 
+async function saveCurrentWindowOnly() {
+  await browser.storage.local.set({ [STORAGE_KEYS.currentWindowOnly]: currentWindowOnlyInput.checked });
+}
+
 async function saveEnsureJQuery() {
   await browser.storage.local.set({ [STORAGE_KEYS.ensureJQuery]: ensureJQueryInput.checked });
 }
@@ -559,6 +869,7 @@ function currentProfileValues() {
     writeMetadataExif: writeMetadataExifInput.checked,
     downloadMetadataText: downloadMetadataTextInput.checked,
     downloadFolder: getDownloadFolder(),
+    currentWindowOnly: currentWindowOnlyInput.checked,
     domainFilter: normalizeDomainFilter(domainFilterInput.value),
     ensureJQuery: ensureJQueryInput.checked
   };
@@ -597,7 +908,7 @@ async function saveProfile() {
     return;
   }
 
-  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
+  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveCurrentWindowOnly(), saveEnsureJQuery()]);
   const profiles = await getProfiles();
   profiles[name] = currentProfileValues();
   await browser.storage.local.set({ [STORAGE_KEYS.profiles]: profiles });
@@ -624,10 +935,11 @@ async function loadProfile() {
   writeMetadataExifInput.checked = profile.writeMetadataExif === true;
   downloadMetadataTextInput.checked = profile.downloadMetadataText !== false;
   downloadFolderInput.value = profile.downloadFolder || "";
+  currentWindowOnlyInput.checked = profile.currentWindowOnly === true;
   domainFilterInput.value = profile.domainFilter || "";
   ensureJQueryInput.checked = profile.ensureJQuery !== false;
   profileNameInput.value = name;
-  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveEnsureJQuery()]);
+  await Promise.all([saveCode(), saveSelector(), saveMetadataSelector(), saveCustomCss(), saveMetadataOptions(), saveDownloadFolder(), saveDomainFilter(), saveCurrentWindowOnly(), saveEnsureJQuery()]);
   setStatus(`Loaded profile: ${name}`);
 }
 
@@ -790,7 +1102,7 @@ async function injectCssInAllTabs() {
   setStatus("Injecting CSS into tabs...");
 
   try {
-    await Promise.all([saveCustomCss(), saveDomainFilter()]);
+    await Promise.all([saveCustomCss(), saveDomainFilter(), saveCurrentWindowOnly()]);
     const tabs = await queryScopedTabs();
     const code = buildCssInjector(css);
     let succeeded = 0;
@@ -809,9 +1121,7 @@ async function injectCssInAllTabs() {
       }
     }
 
-    const domain = normalizeDomainFilter(domainFilterInput.value);
-    const domainMessage = domain ? ` matching ${domain}` : "";
-    const summary = `Injected CSS into ${succeeded} of ${tabs.length} tabs${domainMessage}.`;
+    const summary = `Injected CSS into ${succeeded} of ${tabs.length} tabs${describeScope()}.`;
     setStatus(failures.length ? `${summary}\n\nSkipped/failed:\n${failures.join("\n")}` : summary);
   } catch (error) {
     setStatus(`Failed to inject CSS: ${error.message}`);
@@ -832,7 +1142,7 @@ async function runInAllTabs() {
   setStatus("Finding tabs...");
 
   try {
-    await Promise.all([saveCode(), saveEnsureJQuery(), saveDomainFilter()]);
+    await Promise.all([saveCode(), saveEnsureJQuery(), saveDomainFilter(), saveCurrentWindowOnly()]);
     const tabs = await queryScopedTabs();
     let succeeded = 0;
     const failures = [];
@@ -854,9 +1164,7 @@ async function runInAllTabs() {
       }
     }
 
-    const domain = normalizeDomainFilter(domainFilterInput.value);
-    const domainMessage = domain ? ` matching ${domain}` : "";
-    const summary = `Finished. Ran in ${succeeded} of ${tabs.length} tabs${domainMessage}.`;
+    const summary = `Finished. Ran in ${succeeded} of ${tabs.length} tabs${describeScope()}.`;
     setStatus(failures.length ? `${summary}\n\nSkipped/failed:\n${failures.join("\n")}` : summary);
   } catch (error) {
     setStatus(`Failed: ${error.message}`);
@@ -906,12 +1214,13 @@ async function saveOpenDocuments() {
   try {
     await saveDownloadFolder();
     await saveDomainFilter();
+    await saveCurrentWindowOnly();
     const tabs = await queryScopedTabs();
     const documentUrls = tabs.map((tab) => tab.url).filter(isDocumentUrl);
     const { downloaded, failures } = await downloadUrls(documentUrls);
     const folder = getDownloadFolder();
     const folderMessage = folder ? ` to ${folder}/` : "";
-    const summary = `Queued ${downloaded} open image/PDF document download${downloaded === 1 ? "" : "s"}${folderMessage}.`;
+    const summary = `Queued ${downloaded} open image/PDF document download${downloaded === 1 ? "" : "s"}${folderMessage}${describeScope()}.`;
     setStatus(failures.length ? `${summary}\n\nFailed downloads:\n${failures.join("\n")}` : summary);
   } catch (error) {
     setStatus(`Failed to save open documents: ${error.message}`);
@@ -1034,6 +1343,7 @@ async function getSelectorUrls() {
   await saveSelector();
   await saveMetadataSelector();
   await saveDomainFilter();
+  await saveCurrentWindowOnly();
   const tabs = await queryScopedTabs();
   return collectUrlsFromSelector(tabs, selector, metadataSelectorInput.value.trim());
 }
@@ -1056,7 +1366,7 @@ async function saveSelectorDocuments() {
     const failures = [...collectionFailures, ...downloadFailures];
     const folder = getDownloadFolder();
     const folderMessage = folder ? ` to ${folder}/` : "";
-    const summary = `Queued ${downloaded} selector-based document download${downloaded === 1 ? "" : "s"}${folderMessage}.`;
+    const summary = `Queued ${downloaded} selector-based document download${downloaded === 1 ? "" : "s"}${folderMessage}${describeScope()}.`;
     setStatus(failures.length ? `${summary}\n\nSkipped/failed:\n${failures.join("\n")}` : summary);
   } catch (error) {
     setStatus(`Failed to save selector matches: ${error.message}`);
@@ -1094,7 +1404,7 @@ async function previewSelectorImages() {
     });
     await browser.tabs.create({ url: browser.runtime.getURL("preview.html") });
 
-    const summary = `Opened preview tab with ${imageItems.length} image${imageItems.length === 1 ? "" : "s"}.`;
+    const summary = `Opened preview tab with ${imageItems.length} image${imageItems.length === 1 ? "" : "s"}${describeScope()}.`;
     setStatus(result.failures.length ? `${summary}\n\nSkipped/failed:\n${result.failures.join("\n")}` : summary);
   } catch (error) {
     setStatus(`Failed to preview selector images: ${error.message}`);
@@ -1153,9 +1463,35 @@ tabSetSelect.addEventListener("change", () => {
 });
 downloadFolderInput.addEventListener("change", saveDownloadFolder);
 domainFilterInput.addEventListener("change", saveDomainFilter);
+currentWindowOnlyInput.addEventListener("change", saveCurrentWindowOnly);
 ensureJQueryInput.addEventListener("change", saveEnsureJQuery);
 writeMetadataExifInput.addEventListener("change", saveMetadataOptions);
 downloadMetadataTextInput.addEventListener("change", saveMetadataOptions);
+showHintsInput.addEventListener("change", saveSettings);
+showWarningsInput.addEventListener("change", saveSettings);
+showFieldHelpInput.addEventListener("change", saveSettings);
+bodyBackgroundColorInput.addEventListener("input", saveSettings);
+bodyBackgroundAlphaInput.addEventListener("input", saveSettings);
+bodyTextColorInput.addEventListener("input", saveSettings);
+backgroundImageUrlInput.addEventListener("change", saveSettings);
+backgroundImageFileInput.addEventListener("change", saveBackgroundImageFile);
+mainBackgroundOpacityInput.addEventListener("input", saveSettings);
+formControlOpacityInput.addEventListener("input", saveSettings);
+backgroundPositionSelect.addEventListener("change", saveSettings);
+backgroundRepeatSelect.addEventListener("change", saveSettings);
+backgroundSizeSelect.addEventListener("change", saveSettings);
+backgroundAttachmentSelect.addEventListener("change", saveSettings);
+mainBackgroundColorInput.addEventListener("input", saveSettings);
+mainBackgroundAlphaInput.addEventListener("input", saveSettings);
+googleFontSelect.addEventListener("change", saveSettings);
+clearBackgroundImageButton.addEventListener("click", async () => {
+  backgroundImageUrlInput.value = "";
+  backgroundImageFileInput.value = "";
+  await saveSettings();
+  setStatus("Cleared extension background image.");
+});
+resetSettingsButton.addEventListener("click", resetSettings);
 
+renderGoogleFontOptions();
 restoreSavedValues().catch((error) => setStatus(`Failed to restore saved values: ${error.message}`));
 refreshDesktopHelperStatus();

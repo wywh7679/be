@@ -4,52 +4,54 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>All Tabs Document Runner</title>
+    <link rel="stylesheet" href="vendor/bootstrap.min.css">
     <link rel="stylesheet" href="popup.css">
   </head>
   <body>
-    <main>
+    <main class="main container py-3">
       <h1>All Tabs Document Runner</h1>
-      <p class="warning">
+      <p class="warning alert alert-warning">
         JavaScript runs in every compatible tab and downloads can save files from matching page URLs. Only run code and save documents you trust.
       </p>
 
       <section aria-labelledby="window-actions-heading" class="top-actions">
         <h2 id="window-actions-heading">Window actions</h2>
         <div class="actions wrap">
-          <button id="minimize-windows" type="button">Minimize other windows</button>
-          <button id="restore-minimized-windows" type="button">Restore minimized windows</button>
-          <button id="close-other-windows-tabs" type="button" class="danger">Close other windows/tabs</button>
-          <button id="refresh-desktop-helper" type="button" class="secondary">Check desktop helper</button>
+          <button id="minimize-windows" type="button" class="btn btn-secondary">Minimize other windows</button>
+          <button id="restore-minimized-windows" type="button" class="btn btn-secondary">Restore minimized windows</button>
+          <button id="close-other-windows-tabs" type="button" class="btn btn-outline-danger danger">Close other windows/tabs</button>
+          <button id="refresh-desktop-helper" type="button" class="btn btn-secondary">Check desktop helper</button>
         </div>
         <p class="helper-status">Desktop helper: <span id="desktop-helper-status">Not checked</span></p>
         <div id="desktop-buttons" class="actions wrap" aria-live="polite"></div>
       </section>
 
-      <nav class="tabs" aria-label="Runner sections">
-        <button class="tab active" id="tab-run-save" type="button" aria-controls="panel-run-save" aria-selected="true">Run/Save</button>
-        <button class="tab" id="tab-tab-window" type="button" aria-controls="panel-tab-window" aria-selected="false">Tab/Window</button>
-        <button class="tab" id="tab-profiles" type="button" aria-controls="panel-profiles" aria-selected="false">Profiles</button>
+      <nav class="tabs nav nav-tabs" aria-label="Runner sections">
+        <button class="tab nav-link active" id="tab-run-save" type="button" aria-controls="panel-run-save" aria-selected="true">Run/Save</button>
+        <button class="tab nav-link" id="tab-tab-window" type="button" aria-controls="panel-tab-window" aria-selected="false">Tab/Window</button>
+        <button class="tab nav-link" id="tab-profiles" type="button" aria-controls="panel-profiles" aria-selected="false">Profiles</button>
+        <button class="tab nav-link" id="tab-settings" type="button" aria-controls="panel-settings" aria-selected="false">Settings</button>
       </nav>
 
       <section id="panel-run-save" class="tab-panel active" aria-labelledby="tab-run-save">
         <section aria-labelledby="script-heading">
           <h2 id="script-heading">Run JavaScript</h2>
           <label for="code">JavaScript to execute</label>
-          <label class="inline-option">
-            <input id="ensure-jquery" type="checkbox" checked>
+          <label class="inline-option form-check">
+            <input id="ensure-jquery" class="form-check-input" type="checkbox" checked>
             Load jQuery in each tab before running code if it is not already loaded
           </label>
-          <textarea id="code" spellcheck="false" placeholder="document.body.style.outline = '4px solid orange';"></textarea>
+          <textarea id="code" class="form-control" spellcheck="false" placeholder="document.body.style.outline = '4px solid orange';"></textarea>
           <div class="actions">
-            <button id="run" type="button">Run in all tabs</button>
-            <button id="clear" type="button" class="secondary">Clear</button>
+            <button id="run" type="button" class="btn btn-primary">Run in all tabs</button>
+            <button id="clear" type="button" class="btn btn-secondary">Clear</button>
           </div>
 
           <label for="custom-css">CSS to append to each tab</label>
-          <textarea id="custom-css" spellcheck="false" placeholder="img { outline: 3px solid orange; }"></textarea>
+          <textarea id="custom-css" class="form-control" spellcheck="false" placeholder="img { outline: 3px solid orange; }"></textarea>
           <div class="actions">
-            <button id="inject-css" type="button">Inject CSS in all tabs</button>
-            <button id="clear-css" type="button" class="secondary">Clear CSS</button>
+            <button id="inject-css" type="button" class="btn btn-primary">Inject CSS in all tabs</button>
+            <button id="clear-css" type="button" class="btn btn-secondary">Clear CSS</button>
           </div>
         </section>
 
@@ -57,37 +59,43 @@
           <h2 id="download-heading">Save documents</h2>
           <p class="hint">Download open image/PDF tabs, collect documents with a CSS selector, or preview selected images in a gallery tab.</p>
 
+          <label class="inline-option form-check">
+            <input id="current-window-only" class="form-check-input" type="checkbox">
+            Current window only
+          </label>
+          <p class="field-help">When checked, Run/Save actions target only tabs in this browser window.</p>
+
           <label for="domain-filter">Only include tabs from domain</label>
-          <input id="domain-filter" type="text" placeholder="example.com (optional)">
+          <input id="domain-filter" class="form-control" type="text" placeholder="example.com (optional)">
           <p class="field-help">Leave blank to include all compatible tabs. Entering example.com also includes subdomains like www.example.com.</p>
 
           <label for="download-folder">Download subfolder</label>
-          <input id="download-folder" type="text" placeholder="optional/subfolder">
+          <input id="download-folder" class="form-control" type="text" placeholder="optional/subfolder">
           <p class="field-help">Relative to Firefox's default downloads folder. Leave blank to use the default folder.</p>
           <div class="actions">
-            <button id="clear-folder" type="button" class="secondary">Clear folder</button>
+            <button id="clear-folder" type="button" class="btn btn-secondary">Clear folder</button>
           </div>
 
           <div class="actions stacked">
-            <button id="download-open-documents" type="button">Save open images/PDFs</button>
+            <button id="download-open-documents" type="button" class="btn btn-primary">Save open images/PDFs</button>
           </div>
           <label for="selector">CSS selector for documents or images</label>
-          <input id="selector" type="text" placeholder="a[href$='.pdf'], img">
+          <input id="selector" class="form-control" type="text" placeholder="a[href$='.pdf'], img">
           <label for="metadata-selector">Metadata text selector</label>
-          <input id="metadata-selector" type="text" placeholder="figcaption, .caption, h1 (optional)">
+          <input id="metadata-selector" class="form-control" type="text" placeholder="figcaption, .caption, h1 (optional)">
           <p class="field-help">When set, the matched text can be written to JPEG EXIF and/or saved beside each downloaded selector image as a .txt file with the same base filename.</p>
-          <label class="inline-option">
-            <input id="write-metadata-exif" type="checkbox">
+          <label class="inline-option form-check">
+            <input id="write-metadata-exif" class="form-check-input" type="checkbox">
             Write metadata into JPEG EXIF when possible
           </label>
-          <label class="inline-option">
-            <input id="download-metadata-text" type="checkbox" checked>
+          <label class="inline-option form-check">
+            <input id="download-metadata-text" class="form-check-input" type="checkbox" checked>
             Download metadata .txt sidecar files
           </label>
           <div class="actions wrap">
-            <button id="download-selector-documents" type="button">Save selector matches</button>
-            <button id="preview-selector-images" type="button">Preview selector images</button>
-            <button id="clear-selector" type="button" class="secondary">Clear selector</button>
+            <button id="download-selector-documents" type="button" class="btn btn-secondary">Save selector matches</button>
+            <button id="preview-selector-images" type="button" class="btn btn-secondary">Preview selector images</button>
+            <button id="clear-selector" type="button" class="btn btn-secondary">Clear selector</button>
           </div>
         </section>
       </section>
@@ -97,13 +105,13 @@
           <h2 id="tabsets-heading">Tab/window sets</h2>
           <p class="hint">Save all open normal windows and tabs, then restore them later.</p>
           <label for="tabset-name">Tab set name</label>
-          <input id="tabset-name" type="text" placeholder="Example: Morning research">
+          <input id="tabset-name" class="form-control" type="text" placeholder="Example: Morning research">
           <label for="tabset-select">Saved tab sets</label>
-          <select id="tabset-select"></select>
+          <select id="tabset-select" class="form-select"></select>
           <div class="actions wrap">
-            <button id="save-tabset" type="button">Save open tabs/windows</button>
-            <button id="restore-tabset" type="button">Restore tab set</button>
-            <button id="delete-tabset" type="button" class="secondary">Delete tab set</button>
+            <button id="save-tabset" type="button" class="btn btn-secondary">Save open tabs/windows</button>
+            <button id="restore-tabset" type="button" class="btn btn-secondary">Restore tab set</button>
+            <button id="delete-tabset" type="button" class="btn btn-secondary">Delete tab set</button>
           </div>
         </section>
       </section>
@@ -113,13 +121,100 @@
           <h2 id="profiles-heading">Profiles</h2>
           <p class="hint">Save, load, or remove field presets for code, CSS, selectors, metadata selectors, download folders, jQuery, and domain filters.</p>
           <label for="profile-name">Profile name</label>
-          <input id="profile-name" type="text" placeholder="Example: PDF scraper">
+          <input id="profile-name" class="form-control" type="text" placeholder="Example: PDF scraper">
           <label for="profile-select">Saved profiles</label>
-          <select id="profile-select"></select>
+          <select id="profile-select" class="form-select"></select>
           <div class="actions wrap">
-            <button id="save-profile" type="button">Save profile</button>
-            <button id="load-profile" type="button">Load profile</button>
-            <button id="delete-profile" type="button" class="secondary">Delete profile</button>
+            <button id="save-profile" type="button" class="btn btn-secondary">Save profile</button>
+            <button id="load-profile" type="button" class="btn btn-secondary">Load profile</button>
+            <button id="delete-profile" type="button" class="btn btn-secondary">Delete profile</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="panel-settings" class="tab-panel" aria-labelledby="tab-settings" hidden>
+        <section aria-labelledby="settings-heading">
+          <h2 id="settings-heading">Settings</h2>
+          <p class="hint">Customize helper text, warnings, and the extension page appearance.</p>
+          <label class="inline-option form-check">
+            <input id="show-hints" class="form-check-input" type="checkbox" checked>
+            Show hint text
+          </label>
+          <label class="inline-option form-check">
+            <input id="show-warnings" class="form-check-input" type="checkbox" checked>
+            Show warning text
+          </label>
+          <label class="inline-option form-check">
+            <input id="show-field-help" class="form-check-input" type="checkbox" checked>
+            Show field help text
+          </label>
+          <label for="body-background-color">Body background color</label>
+          <input id="body-background-color" class="form-control form-control-color" type="color" value="#ffffff">
+          <label for="body-background-alpha">Body background color alpha: <span id="body-background-alpha-value">100%</span></label>
+          <input id="body-background-alpha" class="form-range" type="range" min="0" max="100" step="5" value="100">
+          <label for="body-text-color">Body text color</label>
+          <input id="body-text-color" class="form-control form-control-color" type="color" value="#000000">
+          <label for="background-image-url">Body background image URL</label>
+          <input id="background-image-url" class="form-control" type="url" placeholder="https://example.com/background.jpg">
+          <label for="background-image-file">Or choose a body background image</label>
+          <input id="background-image-file" class="form-control" type="file" accept="image/*">
+          <p class="field-help">Leave both blank to use the default body background. Chosen image files are saved in extension storage as data URLs.</p>
+          <label for="main-background-opacity">Main background opacity: <span id="main-background-opacity-value">100%</span></label>
+          <input id="main-background-opacity" class="form-range" type="range" min="0" max="100" step="5" value="100">
+          <label for="form-control-opacity">Input, textarea, and select opacity: <span id="form-control-opacity-value">100%</span></label>
+          <input id="form-control-opacity" class="form-range" type="range" min="0" max="100" step="5" value="100">
+          <div class="row g-2">
+            <div class="col-sm-6">
+              <label for="background-position-select">Background position</label>
+              <select id="background-position-select" class="form-select">
+                <option value="center">Center</option>
+                <option value="top">Top</option>
+                <option value="bottom">Bottom</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+                <option value="top left">Top left</option>
+                <option value="top right">Top right</option>
+                <option value="bottom left">Bottom left</option>
+                <option value="bottom right">Bottom right</option>
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label for="background-repeat-select">Background repeat</label>
+              <select id="background-repeat-select" class="form-select">
+                <option value="no-repeat">No repeat</option>
+                <option value="repeat">Repeat</option>
+                <option value="repeat-x">Repeat horizontally</option>
+                <option value="repeat-y">Repeat vertically</option>
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label for="background-size-select">Background size</label>
+              <select id="background-size-select" class="form-select">
+                <option value="cover">Cover</option>
+                <option value="contain">Contain</option>
+                <option value="auto">Auto</option>
+                <option value="100% 100%">Stretch</option>
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label for="background-attachment-select">Background attachment</label>
+              <select id="background-attachment-select" class="form-select">
+                <option value="scroll">Scroll</option>
+                <option value="fixed">Fixed</option>
+                <option value="local">Local</option>
+              </select>
+            </div>
+          </div>
+          <label for="main-background-color">Main background color</label>
+          <input id="main-background-color" class="form-control form-control-color" type="color" value="#ffffff">
+          <label for="main-background-alpha">Main background color alpha: <span id="main-background-alpha-value">100%</span></label>
+          <input id="main-background-alpha" class="form-range" type="range" min="0" max="100" step="5" value="100">
+          <label for="google-font-select">Google font</label>
+          <select id="google-font-select" class="form-select"></select>
+          <p id="font-preview" class="font-preview">The selected font preview appears here.</p>
+          <div class="actions wrap">
+            <button id="clear-background-image" type="button" class="btn btn-secondary">Clear background image</button>
+            <button id="reset-settings" type="button" class="btn btn-secondary">Reset settings</button>
           </div>
         </section>
       </section>
