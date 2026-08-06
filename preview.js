@@ -34,7 +34,11 @@ function isDataImageUrl(url) {
   return typeof url === "string" && /^data:image\//i.test(url);
 }
 
-function isJpegUrl(url) {
+function isJpegUrl(url, mimeType = "") {
+  if (mimeType === "image/jpeg") {
+    return true;
+  }
+
   if (isDataImageUrl(url)) {
     return /^data:image\/jpe?g[;,]/i.test(url);
   }
@@ -110,7 +114,7 @@ function filenameFromUrl(url, index) {
   try {
     const { pathname } = new URL(url);
     const rawName = decodeURIComponent(pathname.split("/").filter(Boolean).pop() || "");
-    return sanitizeFilenamePart(rawName) || `image-${index + 1}`;
+    return sanitizeFilenamePart(imageItems[index]?.filename || rawName) || `image-${index + 1}`;
   } catch (_error) {
     return `image-${index + 1}`;
   }
@@ -159,7 +163,7 @@ function metadataToText(value) {
 async function imageUrlWithExifMetadata(url, index) {
   const text = metadataToText(metadata[index]);
 
-  if (!writeMetadataExifInput.checked || !text || !isJpegUrl(url) || typeof piexif === "undefined") {
+  if (!writeMetadataExifInput.checked || !text || !isJpegUrl(url, imageItems[index]?.mimeType) || typeof piexif === "undefined") {
     return displayUrls[index] || url;
   }
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "All Tabs Document Runner for Tor Browser",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Run local JavaScript, preview images, and save documents from tabs in Tor Browser.",
   "permissions": [
     "tabs",

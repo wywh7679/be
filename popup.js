@@ -52,6 +52,17 @@ const STORAGE_KEYS = {
 
 const DOCUMENT_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif", ".bmp", ".tif", ".tiff"];
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif", ".bmp", ".tif", ".tiff"];
+const MIME_EXTENSIONS = {
+  "application/pdf": "pdf",
+  "image/avif": "avif",
+  "image/bmp": "bmp",
+  "image/gif": "gif",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/svg+xml": "svg",
+  "image/tiff": "tiff",
+  "image/webp": "webp"
+};
 
 function setStatus(message) {
   statusOutput.textContent = message;
@@ -89,6 +100,54 @@ function isDocumentUrl(url) {
 
 function isImageUrl(url) {
   return isDataImageUrl(url) || hasExtension(url, IMAGE_EXTENSIONS);
+}
+
+function isSupportedMimeType(mimeType) {
+  return mimeType === "application/pdf" || mimeType.startsWith("image/");
+}
+
+function filenameFromContentDisposition(value) {
+  if (!value) {
+    return "";
+  }
+
+  const encodedMatch = /filename\*\s*=\s*(?:UTF-8'')?([^;]+)/i.exec(value);
+  const plainMatch = /filename\s*=\s*(?:"([^"]+)"|([^;]+))/i.exec(value);
+  const rawName = encodedMatch?.[1] || plainMatch?.[1] || plainMatch?.[2] || "";
+
+  try {
+    return decodeURIComponent(rawName.trim().replace(/^['"]|['"]$/g, ""));
+  } catch (_error) {
+    return rawName.trim().replace(/^['"]|['"]$/g, "");
+  }
+}
+
+async function inspectResource(url) {
+  if (!/^https?:/i.test(url)) {
+    return { url };
+  }
+
+  let response;
+
+  try {
+    response = await fetch(url, { credentials: "include", method: "HEAD", redirect: "follow" });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  } catch (_headError) {
+    response = await fetch(url, { credentials: "include", method: "GET", redirect: "follow" });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    response.body?.cancel();
+  }
+
+  const mimeType = (response.headers.get("content-type") || "").split(";", 1)[0].trim().toLowerCase();
+  const filename = filenameFromContentDisposition(response.headers.get("content-disposition"));
+  return { filename, mimeType, url };
 }
 
 function isJpegUrl(url) {
@@ -184,7 +243,7 @@ function hashString(value) {
   return Math.abs(hash).toString(36);
 }
 
-function filenameFromUrl(url, index) {
+function filenameFromUrl(url, index, resource = {}) {
   if (isDataImageUrl(url)) {
     return `data-image-${index + 1}-${hashString(url)}.${extensionFromDataImageUrl(url)}`;
   }
@@ -192,15 +251,21 @@ function filenameFromUrl(url, index) {
   try {
     const { pathname } = new URL(url);
     const rawName = decodeURIComponent(pathname.split("/").filter(Boolean).pop() || "");
-    const cleanName = rawName.replace(/[<>:"|?*\u0000-\u001F]/g, "_").trim();
+    let cleanName = String(resource.filename || rawName).replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_").trim();
+    const extension = MIME_EXTENSIONS[resource.mimeType];
+
+    if (extension && !/\.[a-z0-9]{2,5}$/i.test(cleanName)) {
+      cleanName = `${cleanName || `download-${index + 1}`}.${extension}`;
+    }
+
     return cleanName || `download-${index + 1}`;
   } catch (_error) {
     return `download-${index + 1}`;
   }
 }
 
-function filenameForDownload(url, index, folder = getDownloadFolder()) {
-  const filename = filenameFromUrl(url, index);
+function filenameForDownload(url, index, folder = getDownloadFolder(), resource = {}) {
+  const filename = filenameFromUrl(url, index, resource);
   return folder ? `${folder}/${filename}` : filename;
 }
 
@@ -234,10 +299,10 @@ async function dataUrlToBlobUrl(dataUrl) {
   return URL.createObjectURL(blob);
 }
 
-async function imageUrlWithExifMetadata(url, metadata) {
+async function imageUrlWithExifMetadata(url, metadata, mimeType = "") {
   const text = metadataToText(metadata);
 
-  if (!writeMetadataExifInput.checked || !text || !isJpegUrl(url) || typeof piexif === "undefined") {
+  if (!writeMetadataExifInput.checked || !text || !(isJpegUrl(url) || mimeType === "image/jpeg") || typeof piexif === "undefined") {
     return url;
   }
 
@@ -256,8 +321,8 @@ async function imageUrlWithExifMetadata(url, metadata) {
   }
 }
 
-function textFilenameForDownload(url, index, folder = getDownloadFolder()) {
-  const filename = filenameFromUrl(url, index);
+function textFilenameForDownload(url, index, folder = getDownloadFolder(), resource = {}) {
+  const filename = filenameFromUrl(url, index, resource);
   const dotIndex = filename.lastIndexOf(".");
   const baseName = dotIndex > 0 ? filename.slice(0, dotIndex) : filename;
   const textFilename = `${baseName}.txt`;
@@ -268,7 +333,7 @@ function metadataToText(metadata) {
   return String(metadata || "").replace(/\r?\n/g, "\n").trim();
 }
 
-async function downloadMetadataFile(url, index, metadata, folder = getDownloadFolder()) {
+async function downloadMetadataFile(url, index, metadata, folder = getDownloadFolder(), resource = {}) {
   const text = metadataToText(metadata);
 
   if (!downloadMetadataTextInput.checked || !text) {
@@ -280,7 +345,7 @@ async function downloadMetadataFile(url, index, metadata, folder = getDownloadFo
   try {
     return await browser.downloads.download({
       conflictAction: "uniquify",
-      filename: textFilenameForDownload(url, index, folder),
+      filename: textFilenameForDownload(url, index, folder, resource),
       saveAs: false,
       url: blobUrl
     });
@@ -289,11 +354,12 @@ async function downloadMetadataFile(url, index, metadata, folder = getDownloadFo
   }
 }
 
-async function downloadUrl(url, index, folder = getDownloadFolder(), metadata = "") {
+async function downloadUrl(resource, index, folder = getDownloadFolder()) {
+  const { url, metadata = "" } = resource;
   let downloadSource = isDataImageUrl(url) ? dataImageToBlobUrl(url) : url;
 
   try {
-    const exifSource = await imageUrlWithExifMetadata(url, metadata);
+    const exifSource = await imageUrlWithExifMetadata(url, metadata, resource.mimeType);
 
     if (exifSource !== url) {
       if (downloadSource !== url) {
@@ -304,11 +370,11 @@ async function downloadUrl(url, index, folder = getDownloadFolder(), metadata = 
 
     const downloadId = await browser.downloads.download({
       conflictAction: "uniquify",
-      filename: filenameForDownload(url, index, folder),
+      filename: filenameForDownload(url, index, folder, resource),
       saveAs: false,
       url: downloadSource
     });
-    await downloadMetadataFile(url, index, metadata, folder);
+    await downloadMetadataFile(url, index, metadata, folder, resource);
     return downloadId;
   } finally {
     if (downloadSource !== url && downloadSource.startsWith("blob:")) {
@@ -819,7 +885,7 @@ function normalizeDownloadItems(items) {
     }
 
     seen.add(url);
-    normalizedItems.push({ url, metadata: typeof item === "string" ? "" : item.metadata || "" });
+    normalizedItems.push({ ...(typeof item === "string" ? {} : item), url, metadata: typeof item === "string" ? "" : item.metadata || "" });
   }
 
   return normalizedItems;
@@ -829,9 +895,18 @@ async function downloadUrls(items, folder = getDownloadFolder()) {
   let downloaded = 0;
   const failures = [];
 
-  for (const [index, item] of normalizeDownloadItems(items).entries()) {
+  for (const [index, originalItem] of normalizeDownloadItems(items).entries()) {
+    let item = originalItem;
+
     try {
-      await downloadUrl(item.url, index, folder, item.metadata);
+      try {
+        item = { ...item, ...(await inspectResource(item.url)), metadata: item.metadata };
+      } catch (_inspectionError) {
+        // Header inspection is an enhancement; a server that rejects HEAD/GET
+        // inspection may still be downloadable by the browser downloads API.
+      }
+
+      await downloadUrl(item, index, folder);
       downloaded += 1;
     } catch (error) {
       failures.push(`${item.url}: ${error.message}`);
@@ -849,8 +924,20 @@ async function saveOpenDocuments() {
     await saveDownloadFolder();
     await saveDomainFilter();
     const tabs = await queryScopedTabs();
-    const documentUrls = tabs.map((tab) => tab.url).filter(isDocumentUrl);
-    const { downloaded, failures } = await downloadUrls(documentUrls);
+    const candidates = tabs.map((tab) => tab.url).filter(isDownloadableUrl);
+    const inspected = await Promise.all(candidates.map(async (url) => {
+      if (isDocumentUrl(url)) {
+        return { url };
+      }
+
+      try {
+        return await inspectResource(url);
+      } catch (_error) {
+        return null;
+      }
+    }));
+    const documents = inspected.filter((item) => item && (isDocumentUrl(item.url) || isSupportedMimeType(item.mimeType || "")));
+    const { downloaded, failures } = await downloadUrls(documents);
     const folder = getDownloadFolder();
     const folderMessage = folder ? ` to ${folder}/` : "";
     const summary = `Queued ${downloaded} open image/PDF document download${downloaded === 1 ? "" : "s"}${folderMessage}.`;
@@ -1020,7 +1107,14 @@ async function previewSelectorImages() {
       return;
     }
 
-    const imageItems = normalizeDownloadItems(result.items).filter((item) => isImageUrl(item.url) || !isDocumentUrl(item.url));
+    const inspectedItems = await Promise.all(normalizeDownloadItems(result.items).map(async (item) => {
+      try {
+        return { ...item, ...(await inspectResource(item.url)), metadata: item.metadata };
+      } catch (_error) {
+        return item;
+      }
+    }));
+    const imageItems = inspectedItems.filter((item) => isImageUrl(item.url) || item.mimeType?.startsWith("image/") || !isDocumentUrl(item.url));
 
     if (!imageItems.length) {
       setStatus("No image URLs were found for that selector.");
