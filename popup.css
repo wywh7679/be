@@ -1,0 +1,182 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 420px;
+}
+
+main {
+  padding: 1rem;
+}
+
+h1,
+h2 {
+  margin: 0 0 0.5rem;
+}
+
+h1 {
+  font-size: 1.05rem;
+}
+
+h2 {
+  font-size: 0.95rem;
+}
+
+section + section {
+  border-top: 1px solid rgba(127, 127, 127, 0.35);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.warning,
+.hint,
+.field-help {
+  border-radius: 0.35rem;
+  margin: 0 0 0.75rem;
+  padding: 0.5rem;
+}
+
+.warning {
+  background: rgba(255, 165, 0, 0.18);
+  border: 1px solid rgba(255, 165, 0, 0.55);
+}
+
+.hint,
+.field-help {
+  background: rgba(127, 127, 127, 0.12);
+  border: 1px solid rgba(127, 127, 127, 0.35);
+}
+
+.field-help {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.5rem;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+input,
+select,
+textarea {
+  box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  width: 100%;
+}
+
+input,
+select {
+  padding: 0.4rem;
+}
+
+select {
+  margin-bottom: 0.35rem;
+}
+
+textarea {
+  min-height: 160px;
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.actions.stacked {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.actions.wrap {
+  flex-wrap: wrap;
+}
+
+button {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.45rem 0.75rem;
+}
+
+button.secondary {
+  font-weight: 400;
+}
+
+button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+#status {
+  margin: 0.75rem 0 0;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+@media (min-width: 700px) {
+  body {
+    min-width: 0;
+  }
+
+  main {
+    margin: 0 auto;
+    max-width: 900px;
+  }
+}
+
+.inline-option {
+  align-items: center;
+  display: flex;
+  font-weight: 500;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.inline-option input {
+  width: auto;
+}
+
+.top-actions {
+  border-bottom: 1px solid rgba(127, 127, 127, 0.35);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.tabs {
+  border-bottom: 1px solid rgba(127, 127, 127, 0.35);
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-bottom: 0;
+  border-radius: 0.35rem 0.35rem 0 0;
+  margin-bottom: -1px;
+}
+
+.tab.active {
+  background: Highlight;
+  color: HighlightText;
+}
+
+.tab-panel[hidden] {
+  display: none;
+}
+
+#custom-css {
+  min-height: 100px;
+}
+
+button.danger {
+  border-color: #b00020;
+  color: #b00020;
+}

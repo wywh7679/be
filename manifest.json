@@ -1,0 +1,26 @@
+{
+  "manifest_version": 2,
+  "name": "All Tabs Document Runner for Tor Browser",
+  "version": "1.5.0",
+  "description": "Run local JavaScript, preview images, and save documents from tabs in Tor Browser.",
+  "permissions": [
+    "tabs",
+    "storage",
+    "downloads",
+    "<all_urls>"
+  ],
+  "browser_action": {
+    "default_title": "Run JavaScript, preview images, and save documents"
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "all-tabs-document-runner-tor@example.com",
+      "strict_min_version": "128.0"
+    }
+  }
+}
